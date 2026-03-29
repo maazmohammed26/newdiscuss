@@ -1,5 +1,0 @@
-{
-  "rewrites": [
-    { "source": "/((?!static|manifest|service-worker|robots|sitemap|favicon|.well-known).*)", "destination": "/index.html" }
-  ]
-}
