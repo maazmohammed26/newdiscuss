@@ -195,9 +195,7 @@ export const createPost = async (postData, user) => {
 };
 
 export const getPosts = async (searchQuery = null) => {
-  // Try cache first
   const cacheKey = `posts_${searchQuery || 'all'}`;
-  const cached = await getCachedData(cacheKey, 30000); // 30 second cache
   
   const postsRef = ref(database, 'posts');
   const votesRef = ref(database, 'votes');
