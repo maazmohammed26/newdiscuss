@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { database, ref, onValue } from '@/lib/firebase';
-import api from '@/lib/api';
-import { cachePosts, getCachedPosts } from '@/lib/indexeddb';
+import { getPosts, getTrendingHashtags, subscribeToPostsRealtime } from '@/lib/db';
 import Header from '@/components/Header';
 import PostCard from '@/components/PostCard';
 import CreatePostModal from '@/components/CreatePostModal';
@@ -22,14 +20,10 @@ export default function FeedPage() {
 
   const fetchPosts = useCallback(async (search = '') => {
     try {
-      const params = search ? { search } : {};
-      const { data } = await api.get('/posts', { params });
+      const data = await getPosts(search || null);
       setPosts(data);
-      if (!search) cachePosts(data);
     } catch (err) {
       console.error('Failed to fetch posts:', err);
-      const cached = await getCachedPosts();
-      if (cached.length > 0) setPosts(cached);
     } finally {
       setLoading(false);
     }
@@ -37,8 +31,8 @@ export default function FeedPage() {
 
   const fetchTrendingTags = useCallback(async () => {
     try {
-      const { data } = await api.get('/hashtags/trending');
-      setTrendingTags(data);
+      const tags = await getTrendingHashtags();
+      setTrendingTags(tags);
     } catch {}
   }, []);
 
@@ -47,37 +41,29 @@ export default function FeedPage() {
     fetchTrendingTags();
   }, [fetchPosts, fetchTrendingTags]);
 
-  // Firebase real-time listener for posts
+  // Firebase real-time listener
   useEffect(() => {
-    const postsRef = ref(database, 'posts');
-    const unsubscribe = onValue(postsRef, async () => {
-      try {
-        const params = activeSearch ? { search: activeSearch } : {};
-        const { data } = await api.get('/posts', { params });
-        setPosts(data);
-        if (!activeSearch) cachePosts(data);
-        fetchTrendingTags();
-      } catch {}
-    }, () => {});
+    const unsubscribe = subscribeToPostsRealtime(async (updatedPosts) => {
+      // Filter if there's an active search
+      if (activeSearch) {
+        const q = activeSearch.toLowerCase().trim();
+        const filtered = updatedPosts.filter(p => 
+          p.title?.toLowerCase().includes(q) ||
+          p.content?.toLowerCase().includes(q) ||
+          p.author_username?.toLowerCase().includes(q) ||
+          p.type?.toLowerCase().includes(q) ||
+          (p.hashtags || []).some(t => t.toLowerCase().includes(q.replace('#', '')))
+        );
+        setPosts(filtered);
+      } else {
+        setPosts(updatedPosts);
+      }
+      setLoading(false);
+      fetchTrendingTags();
+    });
+
     return () => unsubscribe();
   }, [activeSearch, fetchTrendingTags]);
-
-  // Listen to votes and comments
-  useEffect(() => {
-    const votesRef = ref(database, 'votes');
-    const commentsRef = ref(database, 'comments');
-    const refresh = async () => {
-      try {
-        const params = activeSearch ? { search: activeSearch } : {};
-        const { data } = await api.get('/posts', { params });
-        setPosts(data);
-        if (!activeSearch) cachePosts(data);
-      } catch {}
-    };
-    const unsub1 = onValue(votesRef, refresh, () => {});
-    const unsub2 = onValue(commentsRef, refresh, () => {});
-    return () => { unsub1(); unsub2(); };
-  }, [activeSearch]);
 
   useEffect(() => {
     const handleOnline = () => { setIsOffline(false); fetchPosts(activeSearch); };

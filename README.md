@@ -1,88 +1,111 @@
 # Discuss - Developer Discussion Platform
 
-A modern real-time discussion platform for developers. Built with React, FastAPI, and Firebase.
+A modern real-time discussion platform for developers. Built with React and Firebase (no backend server needed!).
 
-## Deployment Guide
+## Architecture
 
-### 1. Deploy Backend to Render
+```
+Frontend (React) ──► Firebase Auth (Authentication)
+                 ──► Firebase Realtime Database (Data)
+                 ──► IndexedDB (Offline Cache)
+```
 
-1. Go to [render.com/new](https://dashboard.render.com/new) → **Web Service**
-2. Connect your GitHub repo
-3. Configure:
-   - **Name**: `discuss-backend`
-   - **Root Directory**: `backend`
-   - **Runtime**: `Python 3` (NOT Node.js!)
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `uvicorn server:app --host 0.0.0.0 --port $PORT`
-4. **Environment Variables**:
-   | Key | Value |
-   |-----|-------|
-   | `FIREBASE_DB_URL` | https://your-project-default-rtdb.firebaseio.com |
-   | `JWT_SECRET` | a-random-64-character-string |
-   | `CORS_ORIGINS` | https://your-netlify-app.netlify.app,https://your-vercel-app.vercel.app |
-5. Click **Create Web Service**
-6. **Copy your Render URL** (e.g., `https://discuss-backend.onrender.com`)
+**No backend server required!** Everything runs directly from Firebase.
 
-### 2. Deploy Frontend to Netlify
+## Deployment
+
+### Deploy to Netlify
 
 1. Go to [netlify.com](https://app.netlify.com) → Import repo
 2. **Base directory**: `frontend`
 3. **Build command**: `yarn build`
 4. **Publish directory**: `frontend/build`
-5. **Environment Variables** (CRITICAL!):
+5. **Environment Variables**:
    | Key | Value |
    |-----|-------|
-   | `REACT_APP_BACKEND_URL` | `https://your-render-backend.onrender.com` ← YOUR RENDER URL |
-   | `REACT_APP_FIREBASE_API_KEY` | Your Firebase API key |
-   | `REACT_APP_FIREBASE_AUTH_DOMAIN` | your-project.firebaseapp.com |
-   | `REACT_APP_FIREBASE_DATABASE_URL` | https://your-project-default-rtdb.firebaseio.com |
-   | `REACT_APP_FIREBASE_PROJECT_ID` | your-project-id |
-   | `REACT_APP_FIREBASE_STORAGE_BUCKET` | your-project.appspot.com |
-   | `REACT_APP_FIREBASE_MESSAGING_SENDER_ID` | your-sender-id |
-   | `REACT_APP_FIREBASE_APP_ID` | your-app-id |
+   | `REACT_APP_FIREBASE_API_KEY` | AIzaSyAHjarX3OLHRw7kqvFh_8GsTnqsyl9vg9c |
+   | `REACT_APP_FIREBASE_AUTH_DOMAIN` | discuss-13fbc.firebaseapp.com |
+   | `REACT_APP_FIREBASE_DATABASE_URL` | https://discuss-13fbc-default-rtdb.firebaseio.com |
+   | `REACT_APP_FIREBASE_PROJECT_ID` | discuss-13fbc |
+   | `REACT_APP_FIREBASE_STORAGE_BUCKET` | discuss-13fbc.firebasestorage.app |
+   | `REACT_APP_FIREBASE_MESSAGING_SENDER_ID` | 922676469024 |
+   | `REACT_APP_FIREBASE_APP_ID` | 1:922676469024:web:1c81d8dfc6a914d9d2cb45 |
 6. Click **Deploy**
 
-### 3. Deploy Frontend to Vercel (Alternative)
+### Deploy to Vercel
 
 1. Go to [vercel.com/new](https://vercel.com/new) → Import repo
 2. **Root Directory**: Click "Edit" → type `frontend`
 3. **Framework Preset**: `Create React App`
 4. Add all environment variables (same as Netlify above)
-5. **Important**: Add `REACT_APP_BACKEND_URL` pointing to your Render backend!
+5. Click **Deploy**
 
-## Common Issues
+### After Deployment
 
-### "undefined/api/..." Error
-**Cause**: `REACT_APP_BACKEND_URL` is not set in your deployment environment.
-**Fix**: Add `REACT_APP_BACKEND_URL=https://your-render-backend.onrender.com` in Netlify/Vercel environment variables, then redeploy.
-
-### npm ERESOLVE Error
-**Cause**: Dependency conflicts with npm.
-**Fix**: The `.npmrc` file with `legacy-peer-deps=true` should fix this. Or use yarn instead.
-
-### "Something went wrong" on Google Sign-in
-**Cause**: Firebase domain not authorized.
-**Fix**: Add your deployed domain to Firebase Console → Authentication → Settings → Authorized domains.
+Add your deployed domain to Firebase Console:
+1. Go to [Firebase Console](https://console.firebase.google.com)
+2. Select your project
+3. Authentication → Settings → Authorized domains
+4. Add your Netlify/Vercel domain
 
 ## Local Development
 
-### Backend
-```bash
-cd backend
-python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-uvicorn server:app --host 0.0.0.0 --port 8001 --reload
-```
-
-### Frontend
 ```bash
 cd frontend
 yarn install
 yarn start
 ```
 
+## Features
+
+- **Email/Password Authentication** - Register and login with email
+- **Google Sign-In** - One-click Google authentication
+- **Discussion Posts** - Share thoughts and ideas
+- **Project Showcase** - Share projects with GitHub links and live previews
+- **Real-time Voting** - Upvote/downvote posts (minimum score: 0)
+- **Comments** - Real-time comments on posts
+- **Hashtags** - Tag posts and search by hashtags
+- **Offline Support** - IndexedDB caching for offline access
+- **Mobile Optimized** - Zoom disabled for better mobile UX
+
 ## Tech Stack
+
 - **Frontend**: React 19, Tailwind CSS, Shadcn/UI
-- **Backend**: FastAPI, PyJWT, bcrypt
 - **Database**: Firebase Realtime Database
-- **Auth**: JWT + bcrypt + Google OAuth
+- **Auth**: Firebase Authentication (Email + Google)
+- **Offline**: IndexedDB via idb library
+- **PWA Ready**: Service worker support
+
+## Firebase Security Rules
+
+For production, set these rules in Firebase Console → Realtime Database → Rules:
+
+```json
+{
+  "rules": {
+    "users": {
+      ".indexOn": ["email"],
+      "$uid": {
+        ".read": true,
+        ".write": "auth != null && auth.uid == $uid"
+      }
+    },
+    "posts": {
+      ".indexOn": ["timestamp", "author_id"],
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "comments": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "votes": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}
+```
+
+## License
+MIT

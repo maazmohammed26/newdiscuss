@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import api from '@/lib/api';
-import { database, ref, onValue } from '@/lib/firebase';
+import { useState, useEffect } from 'react';
+import { getComments, createComment, deleteComment, subscribeToCommentsRealtime } from '@/lib/db';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -8,6 +7,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Send, Trash2, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 function timeAgo(iso) {
   if (!iso) return '';
@@ -30,43 +30,50 @@ export default function CommentsSection({ postId, currentUser }) {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  const fetchComments = useCallback(async () => {
-    try {
-      const { data } = await api.get(`/posts/${postId}/comments`);
-      setComments(data);
-    } catch (err) {
-      console.error('Failed to fetch comments:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [postId]);
-
-  useEffect(() => { fetchComments(); }, [fetchComments]);
-
   useEffect(() => {
-    const commentsRef = ref(database, `comments/${postId}`);
-    const unsubscribe = onValue(commentsRef, () => { fetchComments(); }, () => {});
+    // Initial fetch
+    getComments(postId).then(data => {
+      setComments(data);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+
+    // Real-time subscription
+    const unsubscribe = subscribeToCommentsRealtime(postId, (updatedComments) => {
+      setComments(updatedComments);
+      setLoading(false);
+    });
+
     return () => unsubscribe();
-  }, [postId, fetchComments]);
+  }, [postId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!newComment.trim()) return;
     setSubmitting(true);
     try {
-      const { data } = await api.post(`/posts/${postId}/comments`, { text: newComment.trim() });
-      setComments((prev) => [...prev, data]);
+      const comment = await createComment(postId, newComment.trim(), currentUser);
+      setComments((prev) => [...prev, comment]);
       setNewComment('');
-    } catch {} finally { setSubmitting(false); }
+    } catch (err) {
+      toast.error(err.message || 'Failed to add comment');
+    } finally { 
+      setSubmitting(false); 
+    }
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await api.delete(`/posts/${postId}/comments/${deleteTarget}`);
+      await deleteComment(postId, deleteTarget, currentUser.id);
       setComments((prev) => prev.filter((c) => c.id !== deleteTarget));
-    } catch {} finally { setDeleting(false); setDeleteTarget(null); }
+      toast.success('Comment deleted');
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete comment');
+    } finally { 
+      setDeleting(false); 
+      setDeleteTarget(null); 
+    }
   };
 
   return (

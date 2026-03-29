@@ -1,45 +1,33 @@
 # Discuss - Developer Discussion Platform
 
-## Original Problem Statement
-Extract and run the page from discuss-main.zip. Fix voting system to not go below 0, fix deployment issues, remove MongoDB and emergent dependencies.
-
-## Architecture
-- **Backend**: FastAPI with Firebase Realtime Database
+## Architecture (Serverless)
 - **Frontend**: React 19 + Tailwind CSS + Shadcn/UI
-- **Auth**: JWT + bcrypt + Google OAuth (Firebase)
-- **Database**: Firebase Realtime Database (no MongoDB)
+- **Database**: Firebase Realtime Database (direct from frontend)
+- **Auth**: Firebase Authentication (Email + Google)
+- **Offline**: IndexedDB caching
 
 ## What's Been Implemented (Jan 2026)
-- [x] Extracted and deployed project
-- [x] Fixed voting system - minimum score is 0
-- [x] Fixed API URL fallback for deployment
-- [x] Removed MongoDB dependencies
-- [x] Removed emergent dependencies
-- [x] Cleared all test posts
-- [x] Cleaned up craco.config.js and package.json
+- [x] Converted to direct Firebase (no backend)
+- [x] Removed Python/Render dependency
+- [x] Added mobile zoom disable
+- [x] Fixed npm dependency conflicts
+- [x] Voting system (minimum score 0)
+- [x] Real-time posts, comments, votes
+- [x] Google and email authentication
 
 ## Core Features
-- User authentication (email/password + Google OAuth)
+- Email/password and Google auth
 - Discussion posts and project showcases
-- Voting system (minimum 0)
-- Comments on posts
+- Real-time voting (min 0)
+- Real-time comments
 - Hashtag support
+- Offline caching with IndexedDB
 
-## Environment Variables
-### Backend (.env)
-- FIREBASE_DB_URL
-- JWT_SECRET
-- CORS_ORIGINS
+## Deployment
+- Frontend only to Netlify/Vercel
+- Firebase env vars required
+- Add domain to Firebase Authorized Domains
 
-### Frontend (.env)
-- REACT_APP_BACKEND_URL (falls back to window.location.origin)
-- REACT_APP_FIREBASE_* (all Firebase config keys)
-
-## Deployment Notes
-- Backend: Deploy to Render with Python runtime
-- Frontend: Deploy to Vercel/Netlify, set REACT_APP_BACKEND_URL to backend URL
-- Add deployed domain to Firebase authorized domains
-
-## Backlog
-- P1: Configure valid Firebase credentials
-- P2: Add more features as needed
+## Firebase Config
+- Project: discuss-13fbc
+- Database: https://discuss-13fbc-default-rtdb.firebaseio.com

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import api from '@/lib/api';
+import { toggleVote, updatePost, deletePost } from '@/lib/db';
 import CommentsSection from '@/components/CommentsSection';
 import ShareModal from '@/components/ShareModal';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { ChevronUp, ChevronDown, MessageSquare, Share2, Pencil, Trash2, Github, ExternalLink, X, Check, Loader2, Hash } from 'lucide-react';
+import { toast } from 'sonner';
 
 function timeAgo(iso) {
   if (!iso) return '';
@@ -48,9 +49,15 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
     if (voting) return;
     setVoting(true);
     try {
-      const { data } = await api.post(`/posts/${post.id}/vote`, { vote_type: voteType });
+      const data = await toggleVote(post.id, voteType, currentUser.id);
       onVoteChanged(post.id, data);
-    } catch {} finally { setVoting(false); }
+    } catch (err) {
+      if (err.message?.includes('below 0')) {
+        toast.error('Vote score cannot go below 0');
+      }
+    } finally { 
+      setVoting(false); 
+    }
   };
 
   const handleSaveEdit = async () => {
@@ -58,14 +65,29 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
     try {
       const payload = { content: editContent };
       if (isProject) { payload.title = editTitle; payload.github_link = editGithub; payload.preview_link = editPreview; }
-      const { data } = await api.put(`/posts/${post.id}`, payload);
-      onUpdated(data); setEditing(false);
-    } catch {} finally { setSaving(false); }
+      const data = await updatePost(post.id, payload, currentUser.id);
+      onUpdated(data); 
+      setEditing(false);
+      toast.success('Post updated');
+    } catch (err) {
+      toast.error(err.message || 'Failed to update post');
+    } finally { 
+      setSaving(false); 
+    }
   };
 
   const handleDelete = async () => {
     setDeleting(true);
-    try { await api.delete(`/posts/${post.id}`); onDeleted(post.id); } catch {} finally { setDeleting(false); setShowDeleteConfirm(false); }
+    try { 
+      await deletePost(post.id, currentUser.id); 
+      onDeleted(post.id); 
+      toast.success('Post deleted');
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete post');
+    } finally { 
+      setDeleting(false); 
+      setShowDeleteConfirm(false); 
+    }
   };
 
   return (

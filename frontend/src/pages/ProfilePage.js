@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import api from '@/lib/api';
+import { getUserStats } from '@/lib/db';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { FileText, LogOut, Loader2, AlertTriangle } from 'lucide-react';
@@ -13,7 +13,9 @@ export default function ProfilePage() {
   const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
-    if (user?.id) api.get(`/users/${user.id}/stats`).then(({ data }) => setStats(data)).catch(() => {});
+    if (user?.id) {
+      getUserStats(user.id).then(data => setStats(data)).catch(() => {});
+    }
   }, [user]);
 
   const handleLogout = async () => { setLoggingOut(true); await logout(); navigate('/'); };
@@ -26,9 +28,13 @@ export default function ProfilePage() {
       <div className="max-w-sm mx-auto px-4 py-10">
         <div className="bg-white rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-8 text-center">
           {/* Avatar */}
-          <div className="w-24 h-24 rounded-full bg-[#CC0000] flex items-center justify-center mx-auto mb-5 shadow-lg shadow-[#CC0000]/20">
-            <span className="text-white text-2xl font-bold">{initials}</span>
-          </div>
+          {user?.photo_url ? (
+            <img src={user.photo_url} alt={user.username} className="w-24 h-24 rounded-full mx-auto mb-5 shadow-lg object-cover" />
+          ) : (
+            <div className="w-24 h-24 rounded-full bg-[#CC0000] flex items-center justify-center mx-auto mb-5 shadow-lg shadow-[#CC0000]/20">
+              <span className="text-white text-2xl font-bold">{initials}</span>
+            </div>
+          )}
 
           <h1 data-testid="profile-username" className="font-heading text-xl font-bold text-[#0F172A]">{user?.username}</h1>
           <p data-testid="profile-email" className="text-[#64748B] text-[13px] mt-0.5">{user?.email}</p>

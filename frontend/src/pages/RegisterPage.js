@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import api from '@/lib/api';
+import { checkUsernameAvailable, getUserByEmail } from '@/lib/db';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Eye, EyeOff, Loader2, CheckCircle2, XCircle, AlertCircle, Shield } from 'lucide-react';
@@ -17,36 +17,12 @@ export default function RegisterPage() {
   const [password, setPassword] = useState(''); const [confirmPw, setConfirmPw] = useState('');
   const [showPw, setShowPw] = useState(false); const [error, setError] = useState('');
   const [loading, setLoading] = useState(false); const [googleLoading, setGoogleLoading] = useState(false);
-  const [usernameStatus, setUsernameStatus] = useState(null); const [emailStatus, setEmailStatus] = useState(null);
-  const ut = useRef(null); const et = useRef(null);
   const { register, loginWithGoogle } = useAuth(); const navigate = useNavigate();
-
-  useEffect(() => {
-    if (ut.current) clearTimeout(ut.current);
-    if (!username.trim()) { setUsernameStatus(null); return; }
-    if (username.trim().length < 2 || !/^[a-zA-Z0-9_]+$/.test(username.trim())) { setUsernameStatus('invalid'); return; }
-    setUsernameStatus('checking');
-    ut.current = setTimeout(async () => {
-      try { const { data } = await api.get(`/auth/check-username/${username.trim()}`); setUsernameStatus(data.available ? 'available' : 'taken'); } catch { setUsernameStatus(null); }
-    }, 500);
-  }, [username]);
-
-  useEffect(() => {
-    if (et.current) clearTimeout(et.current);
-    if (!email.trim()) { setEmailStatus(null); return; }
-    if (!/^[^@]+@[^@]+\.[^@]+$/.test(email.trim())) { setEmailStatus('invalid'); return; }
-    setEmailStatus('checking');
-    et.current = setTimeout(async () => {
-      try { const { data } = await api.get(`/auth/check-email/${email.trim()}`); setEmailStatus(data.available ? 'available' : 'taken'); } catch { setEmailStatus(null); }
-    }, 500);
-  }, [email]);
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setError('');
     if (!username.trim()) return setError('Username is required');
-    if (usernameStatus === 'taken') return setError('Username is taken');
     if (!email.trim()) return setError('Email is required');
-    if (emailStatus === 'taken') return setError('Email already registered');
     if (!password || password.length < 6) return setError('Password must be 6+ characters');
     if (password !== confirmPw) return setError('Passwords do not match');
     setLoading(true);
@@ -58,14 +34,6 @@ export default function RegisterPage() {
     setError(''); setGoogleLoading(true);
     const r = await loginWithGoogle(); setGoogleLoading(false);
     if (r.success) navigate('/feed'); else if (r.error) setError(r.error);
-  };
-
-  const statusIcon = (s) => {
-    if (s === 'checking') return <Loader2 className="w-3.5 h-3.5 animate-spin text-[#94A3B8]" />;
-    if (s === 'available') return <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981]" />;
-    if (s === 'taken') return <XCircle className="w-3.5 h-3.5 text-[#EF4444]" />;
-    if (s === 'invalid') return <AlertCircle className="w-3.5 h-3.5 text-[#F59E0B]" />;
-    return null;
   };
 
   return (
@@ -89,14 +57,14 @@ export default function RegisterPage() {
 
           <form onSubmit={handleSubmit} className="space-y-3.5">
             <div>
-              <div className="flex items-center justify-between"><label className="text-[#64748B] text-[11px] font-bold uppercase tracking-[0.1em]">Username</label>{statusIcon(usernameStatus)}</div>
+              <label className="text-[#64748B] text-[11px] font-bold uppercase tracking-[0.1em]">Username</label>
               <Input data-testid="register-username-input" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Choose a username"
-                className={`mt-1 bg-[#F0F4FA] border-[#E2E8F0] focus:bg-white focus:border-[#3B82F6] rounded-xl h-11 ${usernameStatus === 'taken' ? 'border-[#EF4444]' : usernameStatus === 'available' ? 'border-[#10B981]' : ''}`} />
+                className="mt-1 bg-[#F0F4FA] border-[#E2E8F0] focus:bg-white focus:border-[#3B82F6] rounded-xl h-11" />
             </div>
             <div>
-              <div className="flex items-center justify-between"><label className="text-[#64748B] text-[11px] font-bold uppercase tracking-[0.1em]">Email</label>{statusIcon(emailStatus)}</div>
+              <label className="text-[#64748B] text-[11px] font-bold uppercase tracking-[0.1em]">Email</label>
               <Input data-testid="register-email-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com"
-                className={`mt-1 bg-[#F0F4FA] border-[#E2E8F0] focus:bg-white focus:border-[#3B82F6] rounded-xl h-11 ${emailStatus === 'taken' ? 'border-[#EF4444]' : emailStatus === 'available' ? 'border-[#10B981]' : ''}`} />
+                className="mt-1 bg-[#F0F4FA] border-[#E2E8F0] focus:bg-white focus:border-[#3B82F6] rounded-xl h-11" />
             </div>
             <div>
               <label className="text-[#64748B] text-[11px] font-bold uppercase tracking-[0.1em]">Password</label>
@@ -108,7 +76,7 @@ export default function RegisterPage() {
               <Input data-testid="register-confirm-password-input" type="password" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} placeholder="Repeat password" className="mt-1 bg-[#F0F4FA] border-[#E2E8F0] focus:bg-white focus:border-[#3B82F6] rounded-xl h-11" />
               {confirmPw && password !== confirmPw && <span className="text-[#EF4444] text-[11px] mt-1 flex items-center gap-1"><XCircle className="w-3 h-3" />Passwords don't match</span>}
             </div>
-            <Button type="submit" data-testid="register-submit-btn" disabled={loading || usernameStatus === 'taken' || emailStatus === 'taken'}
+            <Button type="submit" data-testid="register-submit-btn" disabled={loading}
               className="w-full bg-[#CC0000] hover:bg-[#A30000] text-white font-semibold rounded-full py-3 h-12 text-[15px] shadow-lg shadow-[#CC0000]/20 mt-1">
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Account'}
             </Button>

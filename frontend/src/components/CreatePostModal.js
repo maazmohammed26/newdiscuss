@@ -1,13 +1,16 @@
 import { useState } from 'react';
-import api from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { createPost } from '@/lib/db';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MessageSquare, FolderGit2, Loader2, Hash, X } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function CreatePostModal({ open, onClose, onCreated }) {
+  const { user } = useAuth();
   const [postType, setPostType] = useState('discussion');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -36,13 +39,22 @@ export default function CreatePostModal({ open, onClose, onCreated }) {
     if (!content.trim()) return setError('Content is required');
     setLoading(true);
     try {
-      const { data } = await api.post('/posts', {
-        type: postType, title: postType === 'project' ? title.trim() : '',
-        content: content.trim(), github_link: postType === 'project' ? githubLink.trim() : '',
-        preview_link: postType === 'project' ? previewLink.trim() : '', hashtags,
-      });
-      onCreated(data); reset();
-    } catch (err) { setError(err.response?.data?.detail || 'Failed to create post'); } finally { setLoading(false); }
+      const newPost = await createPost({
+        type: postType, 
+        title: postType === 'project' ? title.trim() : '',
+        content: content.trim(), 
+        github_link: postType === 'project' ? githubLink.trim() : '',
+        preview_link: postType === 'project' ? previewLink.trim() : '', 
+        hashtags,
+      }, user);
+      onCreated(newPost); 
+      reset();
+      toast.success('Post created!');
+    } catch (err) { 
+      setError(err.message || 'Failed to create post'); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   return (
