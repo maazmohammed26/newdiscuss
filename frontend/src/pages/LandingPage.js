@@ -98,17 +98,8 @@ export default function LandingPage() {
           </div>
           <div className="flex flex-col items-center gap-2 pt-2 border-t border-[#E2E8F0] w-full">
             <p className="text-[#64748B] text-[12px]">
-              Developed and managed by{' '}
-              <a 
-                href="https://www.linkedin.com/in/mohammed-maaz-a-0aa730217/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-[#CC0000] hover:underline font-semibold inline-flex items-center gap-1"
-                data-testid="footer-linkedin-link"
-              >
-                Mohammed Maaz A
-                <Linkedin className="w-3 h-3" />
-              </a>
+              Developed by{' '}
+              <span className="text-[#CC0000] font-semibold">&lt;Mohammed Maaz A&gt;</span>
             </p>
             <a 
               href="https://www.linkedin.com/in/mohammed-maaz-a-0aa730217/" 
