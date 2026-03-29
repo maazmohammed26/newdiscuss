@@ -14,13 +14,10 @@ export default function PWAInstallBanner() {
       return;
     }
 
-    // Check if dismissed recently (24 hours)
-    const dismissed = localStorage.getItem('pwa_banner_dismissed');
-    if (dismissed) {
-      const dismissedTime = parseInt(dismissed, 10);
-      if (Date.now() - dismissedTime < 24 * 60 * 60 * 1000) {
-        return;
-      }
+    // Check if already shown once (never show again)
+    const alreadyShown = localStorage.getItem('pwa_banner_shown');
+    if (alreadyShown) {
+      return;
     }
 
     // Listen for install prompt
@@ -61,7 +58,7 @@ export default function PWAInstallBanner() {
 
   const handleDismiss = () => {
     setShowBanner(false);
-    localStorage.setItem('pwa_banner_dismissed', Date.now().toString());
+    localStorage.setItem('pwa_banner_shown', 'true');
   };
 
   if (!showBanner || isInstalled) return null;

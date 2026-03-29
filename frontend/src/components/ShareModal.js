@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Copy, Mail, X, Check } from 'lucide-react';
+import { Copy, Mail, Check } from 'lucide-react';
 
 const LOGO_URL = 'https://customer-assets.emergentagent.com/job_8b258d09-2813-4c39-875f-1044b1a2ed97/artifacts/bnfmcn2l_rqVRL__1_-removebg-preview.png';
-const APP_URL = 'https://discuss.app';
 
 function WhatsAppIcon() {
   return <svg viewBox="0 0 24 24" className="w-6 h-6" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>;
@@ -22,14 +21,14 @@ export default function ShareModal({ open, onClose, post }) {
 
   const postTitle = post.title || post.content?.slice(0, 50) || 'Post';
   const preview = (post.content || '').slice(0, 100);
-  const shareText = `Check out this post on Discuss — "${postTitle}" by @${post.author_username}: ${preview}${post.content?.length > 100 ? '...' : ''}\n\nJoin the discussion at ${APP_URL} — Register now`;
-  const postUrl = `${APP_URL}/post/${post.id}`;
+  
+  // Clean share text - just post info and "Join Discuss"
+  const shareText = `"${postTitle}" by @${post.author_username}\n\n${preview}${post.content?.length > 100 ? '...' : ''}\n\nJoin Discuss`;
   const encodedText = encodeURIComponent(shareText);
-  const encodedUrl = encodeURIComponent(postUrl);
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(`${shareText}\n\n${postUrl}`);
+      await navigator.clipboard.writeText(shareText);
       setCopied(true);
       toast.success('Copied to clipboard!');
       setTimeout(() => setCopied(false), 2000);
@@ -41,16 +40,16 @@ export default function ShareModal({ open, onClose, post }) {
   const handleNativeShare = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ title: postTitle, text: shareText, url: postUrl });
+        await navigator.share({ title: postTitle, text: shareText });
       } catch {}
     }
   };
 
   const shareOptions = [
-    { name: 'WhatsApp', icon: <WhatsAppIcon />, href: `https://wa.me/?text=${encodedText}%0A%0A${encodedUrl}`, color: 'hover:bg-[#25D366]/10' },
-    { name: 'X / Twitter', icon: <TwitterIcon />, href: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`, color: 'hover:bg-black/5' },
-    { name: 'Telegram', icon: <TelegramIcon />, href: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`, color: 'hover:bg-[#0088cc]/10' },
-    { name: 'Email', icon: <Mail className="w-6 h-6 text-[#64748B]" />, href: `mailto:?subject=${encodeURIComponent(`Check out this post on Discuss: ${postTitle}`)}&body=${encodedText}%0A%0A${encodedUrl}`, color: 'hover:bg-[#64748B]/10' },
+    { name: 'WhatsApp', icon: <WhatsAppIcon />, href: `https://wa.me/?text=${encodedText}`, color: 'hover:bg-[#25D366]/10' },
+    { name: 'X / Twitter', icon: <TwitterIcon />, href: `https://twitter.com/intent/tweet?text=${encodedText}`, color: 'hover:bg-black/5' },
+    { name: 'Telegram', icon: <TelegramIcon />, href: `https://t.me/share/url?text=${encodedText}`, color: 'hover:bg-[#0088cc]/10' },
+    { name: 'Email', icon: <Mail className="w-6 h-6 text-[#64748B]" />, href: `mailto:?subject=${encodeURIComponent(`${postTitle} - Discuss`)}&body=${encodedText}`, color: 'hover:bg-[#64748B]/10' },
   ];
 
   return (
@@ -58,18 +57,31 @@ export default function ShareModal({ open, onClose, post }) {
       <DialogContent className="sm:max-w-md bg-white">
         <DialogHeader>
           <div className="flex items-center gap-2.5">
-            <img src={LOGO_URL} alt="Discuss" className="h-7" />
+            <div className="w-10 h-10 bg-[#CC0000] rounded-xl flex items-center justify-center">
+              <img src={LOGO_URL} alt="Discuss" className="h-5 brightness-0 invert" />
+            </div>
             <DialogTitle className="font-heading text-lg font-bold text-[#0F172A]">Share this post</DialogTitle>
           </div>
         </DialogHeader>
 
-        {/* Preview */}
-        <div className="bg-[#F8FAFC] rounded-lg p-3 border border-[#E2E8F0] mt-1">
-          <p className="text-[#0F172A] text-[13px] font-medium leading-snug line-clamp-2">
-            {postTitle}
-          </p>
-          <p className="text-[#64748B] text-[12px] mt-1 line-clamp-2">{preview}{post.content?.length > 100 ? '...' : ''}</p>
-          <p className="text-[#64748B] text-[11px] mt-1">by @{post.author_username}</p>
+        {/* Preview Card with Logo */}
+        <div className="bg-[#F8FAFC] rounded-xl p-4 border border-[#E2E8F0] mt-2">
+          <div className="flex items-start gap-3">
+            <div className="w-12 h-12 bg-[#CC0000] rounded-xl flex items-center justify-center shrink-0">
+              <img src={LOGO_URL} alt="Discuss" className="h-6 brightness-0 invert" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[#0F172A] text-[14px] font-semibold leading-snug line-clamp-2">
+                {postTitle}
+              </p>
+              <p className="text-[#64748B] text-[12px] mt-1 line-clamp-2">{preview}{post.content?.length > 100 ? '...' : ''}</p>
+              <p className="text-[#CC0000] text-[11px] mt-1.5 font-medium">by @{post.author_username}</p>
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-[#E2E8F0] flex items-center justify-center gap-2">
+            <img src={LOGO_URL} alt="" className="h-4" />
+            <span className="text-[#64748B] text-[11px] font-medium">Join Discuss</span>
+          </div>
         </div>
 
         {/* Share buttons */}
@@ -87,7 +99,7 @@ export default function ShareModal({ open, onClose, post }) {
               <span className="text-[10px] text-[#64748B] font-medium">{opt.name}</span>
             </a>
           ))}
-          {/* Copy Link */}
+          {/* Copy */}
           <button
             data-testid="share-copy-link"
             onClick={handleCopy}
@@ -103,7 +115,7 @@ export default function ShareModal({ open, onClose, post }) {
           <button
             data-testid="share-native"
             onClick={handleNativeShare}
-            className="w-full mt-2 bg-[#F1F5F9] hover:bg-[#E2E8F0] text-[#0F172A] rounded-md py-2.5 text-[13px] font-medium transition-colors"
+            className="w-full mt-2 bg-[#F1F5F9] hover:bg-[#E2E8F0] text-[#0F172A] rounded-lg py-2.5 text-[13px] font-medium transition-colors"
           >
             More sharing options...
           </button>
