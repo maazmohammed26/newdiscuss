@@ -25,7 +25,9 @@ export default function CreatePostModal({ open, onClose, onCreated }) {
 
   const addHashtag = () => {
     const tag = hashtagInput.trim().replace(/^#/, '').toLowerCase();
-    if (tag && !hashtags.includes(tag)) setHashtags([...hashtags, tag]);
+    if (!tag) { setHashtagInput(''); return; }
+    if (hashtags.length >= 5) { setHashtagInput(''); return; }
+    if (!hashtags.includes(tag)) setHashtags([...hashtags, tag]);
     setHashtagInput('');
   };
 
@@ -113,11 +115,17 @@ export default function CreatePostModal({ open, onClose, onCreated }) {
               )}
               <div className="flex gap-2">
                 <Input data-testid="create-post-hashtag-input" value={hashtagInput} onChange={(e) => setHashtagInput(e.target.value)}
-                  onKeyDown={handleHashtagKeyDown} placeholder="Type a tag and press Enter"
+                  onKeyDown={handleHashtagKeyDown} placeholder={hashtags.length >= 5 ? "Max 5 hashtags" : "Type a tag and press Enter"}
+                  disabled={hashtags.length >= 5}
                   className="flex-1 bg-[#F1F5F9] dark:bg-[#0F172A] border-transparent dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#64748B] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-md text-[13px]" />
                 <Button type="button" onClick={addHashtag} variant="outline" className="border-[#E2E8F0] dark:border-[#334155] text-[#64748B] dark:text-[#94A3B8] hover:text-[#3B82F6] rounded-md px-3"><Hash className="w-4 h-4" /></Button>
               </div>
-              <p className="text-[#64748B] dark:text-[#94A3B8] text-[11px] mt-1">Press Enter, Space, or comma to add. Hashtags in content are auto-detected.</p>
+              <p className="text-[#64748B] dark:text-[#94A3B8] text-[11px] mt-1">
+                {hashtags.length >= 5 
+                  ? <span className="text-[#EF4444] font-medium">Maximum 5 hashtags reached</span>
+                  : `Press Enter, Space, or comma to add. Max 5 hashtags. (${hashtags.length}/5)`
+                }
+              </p>
             </div>
           </div>
 

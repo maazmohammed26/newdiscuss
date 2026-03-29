@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { getPosts, toggleVote, updatePost, deletePost } from '@/lib/db';
+import { getPosts } from '@/lib/db';
 import Header from '@/components/Header';
 import PostCard from '@/components/PostCard';
 import ThemeToggle from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
-import { FileText, LogOut, Loader2, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { FileText, LogOut, Loader2, AlertTriangle, ChevronDown, ChevronUp, Calendar, Filter } from 'lucide-react';
+
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 export default function ProfilePage() {
   const { user, logout } = useAuth();
@@ -15,19 +17,47 @@ export default function ProfilePage() {
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [showPosts, setShowPosts] = useState(false);
+  const [filterType, setFilterType] = useState('all');
+  const [filterMonth, setFilterMonth] = useState('');
+  const [filterYear, setFilterYear] = useState('');
 
   useEffect(() => {
     if (user?.id) {
       setLoadingPosts(true);
       getPosts()
-        .then(posts => {
-          const mine = posts.filter(p => p.author_id === user.id);
-          setUserPosts(mine);
-        })
+        .then(posts => setUserPosts(posts.filter(p => p.author_id === user.id)))
         .catch(() => {})
         .finally(() => setLoadingPosts(false));
     }
   }, [user]);
+
+  const availableYears = useMemo(() => {
+    const years = new Set();
+    userPosts.forEach(p => {
+      if (p.timestamp) years.add(new Date(p.timestamp).getFullYear());
+    });
+    return Array.from(years).sort((a, b) => b - a);
+  }, [userPosts]);
+
+  const filteredPosts = useMemo(() => {
+    if (filterType === 'all') return userPosts;
+    const now = new Date();
+    return userPosts.filter(p => {
+      if (!p.timestamp) return false;
+      const d = new Date(p.timestamp);
+      if (filterType === 'this_month') {
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      }
+      if (filterType === 'month' && filterMonth !== '') {
+        const yr = filterYear || now.getFullYear();
+        return d.getMonth() === parseInt(filterMonth) && d.getFullYear() === parseInt(yr);
+      }
+      if (filterType === 'year' && filterYear) {
+        return d.getFullYear() === parseInt(filterYear);
+      }
+      return true;
+    });
+  }, [userPosts, filterType, filterMonth, filterYear]);
 
   const handleLogout = async () => { 
     setLoggingOut(true); 
@@ -36,21 +66,11 @@ export default function ProfilePage() {
     navigate('/', { replace: true }); 
   };
 
-  const handlePostDeleted = (postId) => {
-    setUserPosts(prev => prev.filter(p => p.id !== postId));
-  };
-
-  const handlePostUpdated = (updatedPost) => {
-    setUserPosts(prev => prev.map(p => p.id === updatedPost.id ? { ...p, ...updatedPost } : p));
-  };
-
-  const handleVoteChanged = (postId, voteData) => {
-    setUserPosts(prev =>
-      prev.map(p =>
-        p.id === postId ? { ...p, upvote_count: voteData.upvote_count, downvote_count: voteData.downvote_count, votes: voteData.votes } : p
-      )
-    );
-  };
+  const handlePostDeleted = (postId) => setUserPosts(prev => prev.filter(p => p.id !== postId));
+  const handlePostUpdated = (updatedPost) => setUserPosts(prev => prev.map(p => p.id === updatedPost.id ? { ...p, ...updatedPost } : p));
+  const handleVoteChanged = (postId, voteData) => setUserPosts(prev =>
+    prev.map(p => p.id === postId ? { ...p, upvote_count: voteData.upvote_count, downvote_count: voteData.downvote_count, votes: voteData.votes } : p)
+  );
 
   const initials = (user?.username || 'U').slice(0, 2).toUpperCase();
 
@@ -60,7 +80,6 @@ export default function ProfilePage() {
       <div className="max-w-xl mx-auto px-4 py-10">
         {/* Profile Card */}
         <div className="bg-white dark:bg-[#1E293B] rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] dark:shadow-none p-8 text-center">
-          {/* Avatar */}
           {user?.photo_url ? (
             <img src={user.photo_url} alt={user.username} className="w-24 h-24 rounded-full mx-auto mb-5 shadow-lg object-cover" />
           ) : (
@@ -72,7 +91,6 @@ export default function ProfilePage() {
           <h1 data-testid="profile-username" className="font-heading text-xl font-bold text-[#0F172A] dark:text-[#F1F5F9]">{user?.username}</h1>
           <p data-testid="profile-email" className="text-[#6275AF] dark:text-[#94A3B8] text-[13px] mt-0.5">{user?.email}</p>
 
-          {/* Stats */}
           <div className="inline-flex items-center gap-2 bg-[#F5F5F7] dark:bg-[#0F172A] rounded-full px-4 py-2 mt-4">
             <FileText className="w-4 h-4 text-[#2563EB]" />
             <span data-testid="profile-post-count" className="text-[#0F172A] dark:text-[#F1F5F9] text-[13px] font-semibold">
@@ -80,7 +98,6 @@ export default function ProfilePage() {
             </span>
           </div>
 
-          {/* Theme Toggle */}
           <div className="flex items-center justify-center mt-6 pt-5 border-t border-[#E2E8F0] dark:border-[#334155]">
             <div className="flex items-center gap-3">
               <span className="text-[#0F172A] dark:text-[#F1F5F9] text-[13px] font-medium">Theme</span>
@@ -88,13 +105,11 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Password notice */}
           <div className="bg-[#FEF3C7] dark:bg-[#78350F]/20 rounded-xl p-3 mt-5 flex items-center gap-2.5">
             <AlertTriangle className="w-4 h-4 text-[#D97706] shrink-0" />
             <p data-testid="profile-password-notice" className="text-[#92400E] dark:text-[#FDE68A] text-[13px] text-left">Password change is not possible for now.</p>
           </div>
 
-          {/* Logout */}
           <Button data-testid="profile-logout-btn" onClick={handleLogout} disabled={loggingOut}
             className="w-full bg-[#2563EB]/10 hover:bg-[#2563EB]/20 text-[#2563EB] font-semibold rounded-full py-3 h-12 mt-5 transition-all">
             {loggingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <><LogOut className="w-4 h-4 mr-2" /> Logout</>}
@@ -117,25 +132,81 @@ export default function ProfilePage() {
                 <p className="text-[#6275AF] dark:text-[#94A3B8] text-xs">{userPosts.length} post{userPosts.length !== 1 ? 's' : ''}</p>
               </div>
             </div>
-            {showPosts ? (
-              <ChevronUp className="w-5 h-5 text-[#6275AF] dark:text-[#94A3B8]" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-[#6275AF] dark:text-[#94A3B8]" />
-            )}
+            {showPosts ? <ChevronUp className="w-5 h-5 text-[#6275AF] dark:text-[#94A3B8]" /> : <ChevronDown className="w-5 h-5 text-[#6275AF] dark:text-[#94A3B8]" />}
           </button>
 
           {showPosts && (
             <div className="mt-4 space-y-4">
+              {/* Filter bar */}
+              <div data-testid="post-filter-bar" className="flex flex-wrap items-center gap-2 bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] rounded-xl px-3 py-2.5">
+                <Filter className="w-3.5 h-3.5 text-[#6275AF] dark:text-[#94A3B8]" />
+                <select
+                  data-testid="filter-type-select"
+                  value={filterType}
+                  onChange={(e) => { setFilterType(e.target.value); setFilterMonth(''); setFilterYear(''); }}
+                  className="bg-[#F5F5F7] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#334155] text-[#0F172A] dark:text-[#F1F5F9] rounded-lg px-2.5 py-1.5 text-[12px] font-medium outline-none focus:border-[#2563EB]"
+                >
+                  <option value="all">All Posts</option>
+                  <option value="this_month">This Month</option>
+                  <option value="month">Select Month</option>
+                  <option value="year">Select Year</option>
+                </select>
+
+                {filterType === 'month' && (
+                  <>
+                    <select
+                      data-testid="filter-month-select"
+                      value={filterMonth}
+                      onChange={(e) => setFilterMonth(e.target.value)}
+                      className="bg-[#F5F5F7] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#334155] text-[#0F172A] dark:text-[#F1F5F9] rounded-lg px-2.5 py-1.5 text-[12px] font-medium outline-none focus:border-[#2563EB]"
+                    >
+                      <option value="">Month</option>
+                      {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                    </select>
+                    <select
+                      data-testid="filter-month-year-select"
+                      value={filterYear}
+                      onChange={(e) => setFilterYear(e.target.value)}
+                      className="bg-[#F5F5F7] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#334155] text-[#0F172A] dark:text-[#F1F5F9] rounded-lg px-2.5 py-1.5 text-[12px] font-medium outline-none focus:border-[#2563EB]"
+                    >
+                      <option value="">Year</option>
+                      {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                  </>
+                )}
+
+                {filterType === 'year' && (
+                  <select
+                    data-testid="filter-year-select"
+                    value={filterYear}
+                    onChange={(e) => setFilterYear(e.target.value)}
+                    className="bg-[#F5F5F7] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#334155] text-[#0F172A] dark:text-[#F1F5F9] rounded-lg px-2.5 py-1.5 text-[12px] font-medium outline-none focus:border-[#2563EB]"
+                  >
+                    <option value="">Year</option>
+                    {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                )}
+
+                {filterType !== 'all' && (
+                  <span className="text-[#6275AF] dark:text-[#94A3B8] text-[11px] ml-auto">
+                    {filteredPosts.length} result{filteredPosts.length !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+
               {loadingPosts ? (
                 <div className="flex items-center justify-center py-10">
                   <Loader2 className="w-6 h-6 animate-spin text-[#6275AF]" />
                 </div>
-              ) : userPosts.length === 0 ? (
+              ) : filteredPosts.length === 0 ? (
                 <div className="text-center py-10 bg-white dark:bg-[#1E293B] rounded-2xl border border-[#E2E8F0] dark:border-[#334155]">
-                  <p className="text-[#6275AF] dark:text-[#94A3B8] text-[13px]">You haven't created any posts yet.</p>
+                  <Calendar className="w-8 h-8 text-[#6275AF] dark:text-[#94A3B8] mx-auto mb-2" />
+                  <p className="text-[#6275AF] dark:text-[#94A3B8] text-[13px]">
+                    {filterType === 'all' ? "You haven't created any posts yet." : 'No posts found for this period.'}
+                  </p>
                 </div>
               ) : (
-                userPosts.map(post => (
+                filteredPosts.map(post => (
                   <PostCard
                     key={post.id}
                     post={post}

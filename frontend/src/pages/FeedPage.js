@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getPosts, getTrendingHashtags, subscribeToPostsRealtime } from '@/lib/db';
 import Header from '@/components/Header';
@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, MessageSquare, FolderGit2, WifiOff, Loader2, Search, X, Hash, TrendingUp } from 'lucide-react';
 
+const MemoPostCard = memo(PostCard);
+
 export default function FeedPage() {
   const { user } = useAuth();
   const [allPosts, setAllPosts] = useState([]);
@@ -17,18 +19,24 @@ export default function FeedPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeSearch, setActiveSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [trendingTags, setTrendingTags] = useState([]);
   const [activeTab, setActiveTab] = useState('discussion');
 
   useEffect(() => {
-    const timer = setTimeout(() => setPageLoading(false), 1500);
+    const timer = setTimeout(() => setPageLoading(false), 1200);
     return () => clearTimeout(timer);
   }, []);
 
-  const fetchPosts = useCallback(async (search = '') => {
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 250);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const fetchPosts = useCallback(async () => {
     try {
-      const data = await getPosts(search || null);
+      const data = await getPosts();
       setAllPosts(data);
     } catch (err) {
       console.error('Failed to fetch posts:', err);
@@ -52,28 +60,15 @@ export default function FeedPage() {
   // Firebase real-time listener
   useEffect(() => {
     const unsubscribe = subscribeToPostsRealtime(async (updatedPosts) => {
-      if (activeSearch) {
-        const q = activeSearch.toLowerCase().trim();
-        const filtered = updatedPosts.filter(p => 
-          p.title?.toLowerCase().includes(q) ||
-          p.content?.toLowerCase().includes(q) ||
-          p.author_username?.toLowerCase().includes(q) ||
-          p.type?.toLowerCase().includes(q) ||
-          (p.hashtags || []).some(t => t.toLowerCase().includes(q.replace('#', '')))
-        );
-        setAllPosts(filtered);
-      } else {
-        setAllPosts(updatedPosts);
-      }
+      setAllPosts(updatedPosts);
       setLoading(false);
       fetchTrendingTags();
     });
-
     return () => unsubscribe();
-  }, [activeSearch, fetchTrendingTags]);
+  }, [fetchTrendingTags]);
 
   useEffect(() => {
-    const handleOnline = () => { setIsOffline(false); fetchPosts(activeSearch); };
+    const handleOnline = () => { setIsOffline(false); fetchPosts(); };
     const handleOffline = () => setIsOffline(true);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -81,30 +76,30 @@ export default function FeedPage() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [fetchPosts, activeSearch]);
+  }, [fetchPosts]);
 
-  // Filter posts by active tab
-  const filteredPosts = allPosts.filter(p => p.type === activeTab);
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    setActiveSearch(searchQuery);
-    setLoading(true);
-    fetchPosts(searchQuery);
-  };
+  // Client-side fast filtering: by tab AND search query
+  const filteredPosts = useMemo(() => {
+    let posts = allPosts.filter(p => p.type === activeTab);
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase().trim();
+      posts = posts.filter(p =>
+        p.title?.toLowerCase().includes(q) ||
+        p.content?.toLowerCase().includes(q) ||
+        p.author_username?.toLowerCase().includes(q) ||
+        (p.hashtags || []).some(t => t.toLowerCase().includes(q.replace('#', '')))
+      );
+    }
+    return posts;
+  }, [allPosts, activeTab, debouncedSearch]);
 
   const handleClearSearch = () => {
     setSearchQuery('');
-    setActiveSearch('');
-    setLoading(true);
-    fetchPosts('');
+    setDebouncedSearch('');
   };
 
   const handleTagClick = (tag) => {
     setSearchQuery(tag);
-    setActiveSearch(tag);
-    setLoading(true);
-    fetchPosts(tag);
   };
 
   const handlePostCreated = () => {
@@ -112,21 +107,21 @@ export default function FeedPage() {
     fetchTrendingTags();
   };
 
-  const handlePostDeleted = (postId) => {
+  const handlePostDeleted = useCallback((postId) => {
     setAllPosts((prev) => prev.filter((p) => p.id !== postId));
-  };
+  }, []);
 
-  const handlePostUpdated = (updatedPost) => {
+  const handlePostUpdated = useCallback((updatedPost) => {
     setAllPosts((prev) => prev.map((p) => (p.id === updatedPost.id ? updatedPost : p)));
-  };
+  }, []);
 
-  const handleVoteChanged = (postId, voteData) => {
+  const handleVoteChanged = useCallback((postId, voteData) => {
     setAllPosts((prev) =>
       prev.map((p) =>
         p.id === postId ? { ...p, upvote_count: voteData.upvote_count, downvote_count: voteData.downvote_count, votes: voteData.votes } : p
       )
     );
-  };
+  }, []);
 
   if (pageLoading) {
     return <LoadingScreen message="Loading your feed..." />;
@@ -185,7 +180,7 @@ export default function FeedPage() {
         </div>
 
         {/* Search bar */}
-        <form onSubmit={handleSearch} className="mb-4">
+        <div className="mb-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6275AF] dark:text-[#94A3B8]" />
             <Input
@@ -195,34 +190,34 @@ export default function FeedPage() {
               placeholder={`Search ${activeTab === 'discussion' ? 'discussions' : 'projects'}...`}
               className="pl-10 pr-10 bg-white dark:bg-[#1E293B] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#6275AF] focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 rounded-xl text-[13px] md:text-[15px] h-10"
             />
-            {(searchQuery || activeSearch) && (
+            {searchQuery && (
               <button
                 type="button"
                 data-testid="feed-search-clear"
                 onClick={handleClearSearch}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#0F172A] dark:hover:text-white"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6275AF] hover:text-[#0F172A] dark:hover:text-white"
               >
                 <X className="w-4 h-4" />
               </button>
             )}
           </div>
-        </form>
+        </div>
 
         {/* Active search indicator */}
-        {activeSearch && (
-          <div data-testid="active-search-badge" className="flex items-center gap-2 mb-4 bg-[#2563EB]/8 dark:bg-[#3B82F6]/15 border border-[#3B82F6]/15 dark:border-[#3B82F6]/30 rounded-lg px-3 py-2">
+        {debouncedSearch && (
+          <div data-testid="active-search-badge" className="flex items-center gap-2 mb-4 bg-[#2563EB]/8 dark:bg-[#2563EB]/15 border border-[#2563EB]/15 dark:border-[#2563EB]/30 rounded-lg px-3 py-2">
             <Search className="w-3.5 h-3.5 text-[#2563EB]" />
             <span className="text-[#2563EB] text-[13px] font-medium">
-              Showing results for "{activeSearch}" in {activeTab === 'discussion' ? 'Discussions' : 'Projects'}
+              {filteredPosts.length} result{filteredPosts.length !== 1 ? 's' : ''} for "{debouncedSearch}" in {activeTab === 'discussion' ? 'Discussions' : 'Projects'}
             </span>
-            <button onClick={handleClearSearch} className="ml-auto text-[#2563EB] hover:text-[#2563EB]">
+            <button onClick={handleClearSearch} className="ml-auto text-[#2563EB] hover:text-[#1D4ED8]">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
 
         {/* Trending hashtags */}
-        {trendingTags.length > 0 && !activeSearch && (
+        {trendingTags.length > 0 && !debouncedSearch && (
           <div data-testid="trending-tags" className="mb-5">
             <div className="flex items-center gap-1.5 mb-2">
               <TrendingUp className="w-3.5 h-3.5 text-[#6275AF] dark:text-[#94A3B8]" />
@@ -234,7 +229,7 @@ export default function FeedPage() {
                   key={t.tag}
                   data-testid={`trending-tag-${t.tag}`}
                   onClick={() => handleTagClick(t.tag)}
-                  className="inline-flex items-center gap-1 bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] hover:border-[#3B82F6]/30 hover:bg-[#3B82F6]/5 dark:hover:bg-[#3B82F6]/10 rounded-full px-2.5 py-1 text-xs font-medium text-[#6275AF] dark:text-[#94A3B8] hover:text-[#2563EB] transition-all"
+                  className="inline-flex items-center gap-1 bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] hover:border-[#2563EB]/30 hover:bg-[#2563EB]/5 dark:hover:bg-[#2563EB]/10 rounded-full px-2.5 py-1 text-xs font-medium text-[#6275AF] dark:text-[#94A3B8] hover:text-[#2563EB] transition-all"
                 >
                   <Hash className="w-3 h-3" />
                   {t.tag}
@@ -248,7 +243,7 @@ export default function FeedPage() {
         {/* Posts */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-[#64748B]" />
+            <Loader2 className="w-6 h-6 animate-spin text-[#6275AF]" />
           </div>
         ) : filteredPosts.length === 0 ? (
           <div data-testid="empty-feed" className="text-center py-20">
@@ -260,16 +255,16 @@ export default function FeedPage() {
               )}
             </div>
             <h3 className="text-lg font-semibold text-[#0F172A] dark:text-[#F1F5F9] mb-1">
-              {activeSearch ? 'No results found' : `No ${activeTab === 'discussion' ? 'discussions' : 'projects'} yet`}
+              {debouncedSearch ? 'No results found' : `No ${activeTab === 'discussion' ? 'discussions' : 'projects'} yet`}
             </h3>
             <p className="text-[#6275AF] dark:text-[#94A3B8] text-[13px] md:text-[15px]">
-              {activeSearch ? `Try a different search term` : `Be the first to start a ${activeTab === 'discussion' ? 'discussion' : 'project post'}!`}
+              {debouncedSearch ? `Try a different search term` : `Be the first to start a ${activeTab === 'discussion' ? 'discussion' : 'project post'}!`}
             </p>
           </div>
         ) : (
           <div className="space-y-4">
             {filteredPosts.map((post) => (
-              <PostCard
+              <MemoPostCard
                 key={post.id}
                 post={post}
                 currentUser={user}

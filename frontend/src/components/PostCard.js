@@ -3,6 +3,7 @@ import { toggleVote, updatePost, deletePost } from '@/lib/db';
 import CommentsSection from '@/components/CommentsSection';
 import ShareModal from '@/components/ShareModal';
 import LinkifiedText from '@/components/LinkifiedText';
+import ExpandableText from '@/components/ExpandableText';
 import ExternalLinkModal from '@/components/ExternalLinkModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -155,8 +156,10 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
             {isProject && post.title && (
               <h3 data-testid={`post-title-${post.id}`} className="font-bold text-[#0F172A] dark:text-[#F1F5F9] text-[15px] md:text-[17px] mb-1.5 leading-snug">{post.title}</h3>
             )}
-            <div data-testid={`post-content-${post.id}`} className="text-[#0F172A] dark:text-[#E2E8F0] text-[13px] md:text-[15px] leading-relaxed whitespace-pre-wrap">
-              <LinkifiedText text={post.content} />
+            <div data-testid={`post-content-${post.id}`} className="text-[#0F172A] dark:text-[#E2E8F0] text-[13px] md:text-[15px] leading-relaxed">
+              <ExpandableText text={post.content} maxLines={5}>
+                <span className="whitespace-pre-wrap"><LinkifiedText text={post.content} /></span>
+              </ExpandableText>
             </div>
 
             {hashtags.length > 0 && (
@@ -237,7 +240,7 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
         </div>
       )}
 
-      {showComments && <CommentsSection postId={post.id} currentUser={currentUser} />}
+      {showComments && <CommentsSection postId={post.id} postAuthorId={post.author_id} currentUser={currentUser} />}
       <ShareModal open={showShare} onClose={() => setShowShare(false)} post={post} />
 
       {externalLink && (

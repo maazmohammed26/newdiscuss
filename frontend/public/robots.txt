@@ -1,29 +1,36 @@
 User-agent: *
 Allow: /
-Disallow: /api/
 Disallow: /feed
 Disallow: /profile
+Disallow: /login
+Disallow: /register
 
-Sitemap: https://discuss.app/sitemap.xml
-
-# AI Crawlers
 User-agent: GPTBot
 Allow: /
+Disallow: /feed
+Disallow: /profile
+Disallow: /login
+Disallow: /register
 
 User-agent: Google-Extended
 Allow: /
+Disallow: /feed
+Disallow: /profile
+Disallow: /login
+Disallow: /register
 
-User-agent: ChatGPT-User
+User-agent: CCBot
 Allow: /
+Disallow: /feed
+Disallow: /profile
+Disallow: /login
+Disallow: /register
 
-User-agent: Bingbot
+User-agent: anthropic-ai
 Allow: /
+Disallow: /feed
+Disallow: /profile
+Disallow: /login
+Disallow: /register
 
-User-agent: Anthropic-ai
-Allow: /
-
-User-agent: ClaudeBot
-Allow: /
-
-User-agent: PerplexityBot
-Allow: /
+Sitemap: https://dsscus.netlify.app/sitemap.xml
