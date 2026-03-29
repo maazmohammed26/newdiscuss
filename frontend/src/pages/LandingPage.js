@@ -6,9 +6,8 @@ import Header from '@/components/Header';
 import LoadingScreen from '@/components/LoadingScreen';
 import PWAInstallBanner from '@/components/PWAInstallBanner';
 import AdminMessageBanner from '@/components/AdminMessageBanner';
-import { ArrowRight, MessageSquare, FolderGit2, Zap, Users, Shield, Linkedin } from 'lucide-react';
-
-const LOGO_URL = 'https://customer-assets.emergentagent.com/job_8b258d09-2813-4c39-875f-1044b1a2ed97/artifacts/bnfmcn2l_rqVRL__1_-removebg-preview.png';
+import DiscussLogo from '@/components/DiscussLogo';
+import { ArrowRight, MessageSquare, FolderGit2, Zap, Linkedin, Users, Shield } from 'lucide-react';
 
 const features = [
   { icon: MessageSquare, title: 'Crafted for clarity.', desc: 'Designed to elevate the user experience through silence and space. Every element serves a purpose.' },
@@ -112,7 +111,7 @@ export default function LandingPage() {
       <footer className="py-6 px-4 border-t border-[#E2E8F0] bg-white">
         <div className="max-w-5xl mx-auto flex flex-col items-center gap-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
-            <img src={LOGO_URL} alt="Discuss" className="h-6" />
+            <DiscussLogo size="md" />
             <p className="text-[#64748B] text-xs">&copy; {new Date().getFullYear()} Discuss. Built for developers.</p>
           </div>
           <div className="flex flex-col items-center gap-2 pt-2 border-t border-[#E2E8F0] w-full">

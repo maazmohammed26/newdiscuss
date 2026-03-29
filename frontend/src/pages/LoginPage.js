@@ -6,9 +6,8 @@ import { Input } from '@/components/ui/input';
 import TermsModal from '@/components/TermsModal';
 import LoadingScreen from '@/components/LoadingScreen';
 import AdminMessageBanner from '@/components/AdminMessageBanner';
+import DiscussLogo from '@/components/DiscussLogo';
 import { Eye, EyeOff, Loader2, XCircle, Shield, AlertCircle } from 'lucide-react';
-
-const LOGO_URL = 'https://customer-assets.emergentagent.com/job_8b258d09-2813-4c39-875f-1044b1a2ed97/artifacts/bnfmcn2l_rqVRL__1_-removebg-preview.png';
 
 function GoogleIcon() {
   return (
@@ -75,13 +74,9 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="text-center mb-8">
-            <Link to="/">
-              <div className="w-16 h-16 bg-[#CC0000] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#CC0000]/20">
-                <img src={LOGO_URL} alt="" className="h-8 brightness-0 invert" data-testid="login-logo" />
-              </div>
+            <Link to="/" data-testid="login-logo">
+              <DiscussLogo size="lg" />
             </Link>
-            <h1 className="font-heading text-2xl font-bold text-[#0F172A] italic">discuss</h1>
-            <p className="text-[#64748B] text-[13px] mt-1">welcome back to the conversation</p>
           </div>
 
           {/* Card */}
