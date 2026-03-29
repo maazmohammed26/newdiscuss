@@ -385,18 +385,60 @@ export const getTrendingHashtags = async () => {
   if (!snapshot.exists()) return [];
   
   const posts = snapshot.val();
-  const tagCounts = {};
+  const tagData = {};
   
+  // Collect hashtags with count and latest timestamp
   Object.values(posts).forEach(post => {
+    const postTime = new Date(post.timestamp).getTime();
     (post.hashtags || []).forEach(tag => {
-      tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+      if (!tagData[tag]) {
+        tagData[tag] = { count: 0, latestTimestamp: 0 };
+      }
+      tagData[tag].count += 1;
+      if (postTime > tagData[tag].latestTimestamp) {
+        tagData[tag].latestTimestamp = postTime;
+      }
     });
   });
   
-  return Object.entries(tagCounts)
-    .map(([tag, count]) => ({ tag, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 20);
+  const tagsArray = Object.entries(tagData).map(([tag, data]) => ({
+    tag,
+    count: data.count,
+    latestTimestamp: data.latestTimestamp
+  }));
+  
+  // Check if all tags have count 1 (no repeats)
+  const allSingleUse = tagsArray.every(t => t.count === 1);
+  
+  if (allSingleUse) {
+    // Show latest 4 hashtags by timestamp
+    return tagsArray
+      .sort((a, b) => b.latestTimestamp - a.latestTimestamp)
+      .slice(0, 4)
+      .map(({ tag, count }) => ({ tag, count }));
+  } else {
+    // Show top 4 most used hashtags
+    return tagsArray
+      .sort((a, b) => b.count - a.count || b.latestTimestamp - a.latestTimestamp)
+      .slice(0, 4)
+      .map(({ tag, count }) => ({ tag, count }));
+  }
+};
+
+// ==================== ADMIN MESSAGE ====================
+
+export const getAdminMessage = async () => {
+  const messageRef = ref(database, 'admin_settings/admin_message');
+  const snapshot = await get(messageRef);
+  return snapshot.exists() ? snapshot.val() : null;
+};
+
+export const subscribeToAdminMessage = (callback) => {
+  const messageRef = ref(database, 'admin_settings/admin_message');
+  onValue(messageRef, (snapshot) => {
+    callback(snapshot.exists() ? snapshot.val() : null);
+  });
+  return () => off(messageRef);
 };
 
 // ==================== USER STATS ====================

@@ -20,10 +20,20 @@ export default function ShareModal({ open, onClose, post }) {
   if (!post) return null;
 
   const postTitle = post.title || post.content?.slice(0, 50) || 'Post';
-  const preview = (post.content || '').slice(0, 100);
+  const fullContent = post.content || '';
   
-  // Clean share text - just post info and "Join Discuss"
-  const shareText = `"${postTitle}" by @${post.author_username}\n\n${preview}${post.content?.length > 100 ? '...' : ''}\n\nJoin Discuss`;
+  // Build share text with full content and all links
+  let shareText = `"${postTitle}" by @${post.author_username}\n\n${fullContent}`;
+  
+  // Add project links if available
+  if (post.github_link) {
+    shareText += `\n\nGitHub: ${post.github_link}`;
+  }
+  if (post.preview_link) {
+    shareText += `\nLive Preview: ${post.preview_link}`;
+  }
+  
+  shareText += '\n\nJoin Discuss';
   const encodedText = encodeURIComponent(shareText);
 
   const handleCopy = async () => {
@@ -74,7 +84,17 @@ export default function ShareModal({ open, onClose, post }) {
               <p className="text-[#0F172A] text-[14px] font-semibold leading-snug line-clamp-2">
                 {postTitle}
               </p>
-              <p className="text-[#64748B] text-[12px] mt-1 line-clamp-2">{preview}{post.content?.length > 100 ? '...' : ''}</p>
+              <p className="text-[#64748B] text-[12px] mt-1 line-clamp-3 whitespace-pre-wrap">{fullContent}</p>
+              {(post.github_link || post.preview_link) && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {post.github_link && (
+                    <span className="text-[10px] text-[#3B82F6] bg-[#3B82F6]/10 px-2 py-0.5 rounded">GitHub</span>
+                  )}
+                  {post.preview_link && (
+                    <span className="text-[10px] text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded">Live Preview</span>
+                  )}
+                </div>
+              )}
               <p className="text-[#CC0000] text-[11px] mt-1.5 font-medium">by @{post.author_username}</p>
             </div>
           </div>

@@ -199,7 +199,7 @@ export default function FeedPage() {
               <span className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Trending</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {trendingTags.slice(0, 8).map((t) => (
+              {trendingTags.slice(0, 4).map((t) => (
                 <button
                   key={t.tag}
                   data-testid={`trending-tag-${t.tag}`}

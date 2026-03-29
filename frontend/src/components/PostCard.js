@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { toggleVote, updatePost, deletePost } from '@/lib/db';
 import CommentsSection from '@/components/CommentsSection';
 import ShareModal from '@/components/ShareModal';
+import LinkifiedText from '@/components/LinkifiedText';
+import ExternalLinkModal from '@/components/ExternalLinkModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -39,6 +41,7 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
   const [voting, setVoting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [externalLink, setExternalLink] = useState(null);
 
   const isAuthor = currentUser?.id === post.author_id;
   const isProject = post.type === 'project';
@@ -46,6 +49,12 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
   const userVote = (post.votes || {})[currentUser?.id] || null;
   const upvoteCount = post.upvote_count || 0;
   const downvoteCount = post.downvote_count || 0;
+
+  const handleExternalLink = (url, e) => {
+    if (e) e.preventDefault();
+    const isHttp = url.toLowerCase().startsWith('http://') && !url.toLowerCase().startsWith('https://');
+    setExternalLink({ url, isHttp });
+  };
 
   const handleVote = async (voteType) => {
     if (voting) return;
@@ -146,7 +155,9 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
             {isProject && post.title && (
               <h3 data-testid={`post-title-${post.id}`} className="font-bold text-[#0F172A] text-[15px] md:text-[17px] mb-1.5 leading-snug">{post.title}</h3>
             )}
-            <p data-testid={`post-content-${post.id}`} className="text-[#0F172A] text-[13px] md:text-[15px] leading-relaxed whitespace-pre-wrap">{post.content}</p>
+            <div data-testid={`post-content-${post.id}`} className="text-[#0F172A] text-[13px] md:text-[15px] leading-relaxed whitespace-pre-wrap">
+              <LinkifiedText text={post.content} />
+            </div>
 
             {hashtags.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-3">
@@ -162,16 +173,16 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
             {isProject && (post.github_link || post.preview_link) && (
               <div className="flex flex-wrap gap-2 mt-3">
                 {post.github_link && (
-                  <a href={post.github_link} target="_blank" rel="noopener noreferrer" data-testid={`post-github-link-${post.id}`}
+                  <button onClick={(e) => handleExternalLink(post.github_link, e)} data-testid={`post-github-link-${post.id}`}
                     className="inline-flex items-center gap-1.5 bg-[#0F172A] text-white rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-[#1E293B] transition-colors">
                     <Github className="w-3.5 h-3.5" /> GitHub
-                  </a>
+                  </button>
                 )}
                 {post.preview_link && (
-                  <a href={post.preview_link} target="_blank" rel="noopener noreferrer" data-testid={`post-preview-link-${post.id}`}
+                  <button onClick={(e) => handleExternalLink(post.preview_link, e)} data-testid={`post-preview-link-${post.id}`}
                     className="inline-flex items-center gap-1.5 bg-[#3B82F6] text-white rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-[#2563EB] transition-colors">
                     <ExternalLink className="w-3.5 h-3.5" /> Live Preview
-                  </a>
+                  </button>
                 )}
               </div>
             )}
@@ -232,6 +243,15 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
 
       {showComments && <CommentsSection postId={post.id} currentUser={currentUser} />}
       <ShareModal open={showShare} onClose={() => setShowShare(false)} post={post} />
+
+      {externalLink && (
+        <ExternalLinkModal
+          open={true}
+          onClose={() => setExternalLink(null)}
+          url={externalLink.url}
+          isHttp={externalLink.isHttp}
+        />
+      )}
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>

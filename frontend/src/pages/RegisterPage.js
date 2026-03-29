@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import TermsModal from '@/components/TermsModal';
 import LoadingScreen from '@/components/LoadingScreen';
+import AdminMessageBanner from '@/components/AdminMessageBanner';
 import { Eye, EyeOff, Loader2, CheckCircle2, XCircle, AlertCircle, Shield } from 'lucide-react';
 
 const LOGO_URL = 'https://customer-assets.emergentagent.com/job_8b258d09-2813-4c39-875f-1044b1a2ed97/artifacts/bnfmcn2l_rqVRL__1_-removebg-preview.png';
@@ -153,6 +154,7 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-[#F0F4FA] flex flex-col">
+      <AdminMessageBanner />
       <div className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">

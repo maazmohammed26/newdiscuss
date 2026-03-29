@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
 import LoadingScreen from '@/components/LoadingScreen';
 import PWAInstallBanner from '@/components/PWAInstallBanner';
+import AdminMessageBanner from '@/components/AdminMessageBanner';
 import { ArrowRight, MessageSquare, FolderGit2, Zap, Users, Shield, Linkedin } from 'lucide-react';
 
 const LOGO_URL = 'https://customer-assets.emergentagent.com/job_8b258d09-2813-4c39-875f-1044b1a2ed97/artifacts/bnfmcn2l_rqVRL__1_-removebg-preview.png';
@@ -33,6 +34,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#F0F4FA]">
+      <AdminMessageBanner />
       <Header />
       <PWAInstallBanner />
 
