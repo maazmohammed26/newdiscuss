@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { getAdminSettings } from '@/lib/db';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Eye, EyeOff, Loader2, XCircle, Shield } from 'lucide-react';
+import TermsModal from '@/components/TermsModal';
+import { Eye, EyeOff, Loader2, XCircle, Shield, AlertCircle, Linkedin } from 'lucide-react';
 
 const LOGO_URL = 'https://customer-assets.emergentagent.com/job_8b258d09-2813-4c39-875f-1044b1a2ed97/artifacts/bnfmcn2l_rqVRL__1_-removebg-preview.png';
 
@@ -25,100 +27,170 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [showForgotDisabled, setShowForgotDisabled] = useState(false);
+  const [forgotPasswordEnabled, setForgotPasswordEnabled] = useState(true);
   const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    getAdminSettings().then(settings => {
+      setForgotPasswordEnabled(settings.forgot_password_enabled !== false);
+    }).catch(() => {});
+  }, []);
+
   const handleSubmit = async (e) => {
-    e.preventDefault(); setError('');
+    e.preventDefault();
+    setError('');
     if (!email.trim()) return setError('Email is required');
     if (!password) return setError('Password is required');
     setLoading(true);
-    const r = await login(email, password); setLoading(false);
-    if (r.success) navigate('/feed'); else setError(r.error);
+    const r = await login(email, password);
+    setLoading(false);
+    if (r.success) navigate('/feed');
+    else setError(r.error);
   };
 
   const handleGoogle = async () => {
-    setError(''); setGoogleLoading(true);
-    const r = await loginWithGoogle(); setGoogleLoading(false);
-    if (r.success) navigate('/feed'); else if (r.error) setError(r.error);
+    setError('');
+    setGoogleLoading(true);
+    const r = await loginWithGoogle();
+    setGoogleLoading(false);
+    if (r.success) navigate('/feed');
+    else if (r.error) setError(r.error);
+  };
+
+  const handleForgotPassword = () => {
+    if (!forgotPasswordEnabled) {
+      setShowForgotDisabled(true);
+    } else {
+      // TODO: Implement forgot password flow
+      alert('Password reset functionality coming soon!');
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[#F0F4FA] flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <Link to="/">
-            <div className="w-16 h-16 bg-[#CC0000] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#CC0000]/20">
-              <img src={LOGO_URL} alt="" className="h-8 brightness-0 invert" data-testid="login-logo" />
-            </div>
-          </Link>
-          <h1 className="font-heading text-2xl font-bold text-[#0F172A] italic">discuss</h1>
-          <p className="text-[#64748B] text-[13px] mt-1">welcome back to the conversation</p>
-        </div>
-
-        {/* Card */}
-        <div className="bg-white rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-6 md:p-8">
-          {error && (
-            <div data-testid="login-error" className="bg-[#EF4444]/8 border border-[#EF4444]/15 rounded-xl p-3 text-[#EF4444] text-[13px] mb-4 flex items-start gap-2">
-              <XCircle className="w-4 h-4 shrink-0 mt-0.5" /><span>{error}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="text-[#64748B] text-[11px] font-bold uppercase tracking-[0.1em]">Email Address</label>
-              <Input data-testid="login-email-input" type="email" value={email}
-                onChange={(e) => { setEmail(e.target.value); setError(''); }}
-                placeholder="name@example.com"
-                className="mt-1.5 bg-[#F0F4FA] border-[#E2E8F0] focus:bg-white focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-xl h-11" />
-            </div>
-            <div>
-              <div className="flex justify-between items-center">
-                <label className="text-[#64748B] text-[11px] font-bold uppercase tracking-[0.1em]">Password</label>
-                <span className="text-[#CC0000] text-[12px] font-medium cursor-pointer hover:underline">Forgot?</span>
+    <div className="min-h-screen bg-[#F0F4FA] flex flex-col">
+      <div className="flex-1 flex items-center justify-center px-4">
+        <div className="w-full max-w-sm">
+          {/* Logo */}
+          <div className="text-center mb-8">
+            <Link to="/">
+              <div className="w-16 h-16 bg-[#CC0000] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#CC0000]/20">
+                <img src={LOGO_URL} alt="" className="h-8 brightness-0 invert" data-testid="login-logo" />
               </div>
-              <div className="relative mt-1.5">
-                <Input data-testid="login-password-input" type={showPw ? 'text' : 'password'} value={password}
-                  onChange={(e) => { setPassword(e.target.value); setError(''); }}
-                  placeholder="Enter password"
-                  className="bg-[#F0F4FA] border-[#E2E8F0] focus:bg-white focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-xl h-11 pr-10" />
-                <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#0F172A]">
-                  {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-            <Button type="submit" data-testid="login-submit-btn" disabled={loading}
-              className="w-full bg-[#CC0000] hover:bg-[#A30000] text-white font-semibold rounded-full py-3 h-12 text-[15px] shadow-lg shadow-[#CC0000]/20 transition-all">
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Login'}
-            </Button>
-          </form>
-
-          <div className="relative my-5">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#E2E8F0]" /></div>
-            <div className="relative flex justify-center text-[11px]"><span className="bg-white px-3 text-[#94A3B8] uppercase tracking-wider">Or continue with</span></div>
+            </Link>
+            <h1 className="font-heading text-2xl font-bold text-[#0F172A] italic">discuss</h1>
+            <p className="text-[#64748B] text-[13px] mt-1">welcome back to the conversation</p>
           </div>
 
-          <Button type="button" data-testid="login-google-btn" onClick={handleGoogle} disabled={googleLoading}
-            className="w-full bg-[#F0F4FA] border border-[#E2E8F0] text-[#0F172A] hover:bg-[#E2E8F0] rounded-full py-2.5 h-11 font-medium flex items-center justify-center gap-2.5">
-            {googleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><GoogleIcon /> Continue with Google</>}
-          </Button>
+          {/* Card */}
+          <div className="bg-white rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-6 md:p-8">
+            {error && (
+              <div data-testid="login-error" className="bg-[#EF4444]/8 border border-[#EF4444]/15 rounded-xl p-3 text-[#EF4444] text-[13px] mb-4 flex items-start gap-2">
+                <XCircle className="w-4 h-4 shrink-0 mt-0.5" /><span>{error}</span>
+              </div>
+            )}
 
-          <p className="text-center text-[#64748B] text-[13px] mt-5">
-            New to discuss? <Link to="/register" data-testid="login-to-register-link" className="text-[#CC0000] hover:underline font-semibold">Create account</Link>
-          </p>
-        </div>
+            {showForgotDisabled && (
+              <div data-testid="forgot-disabled-message" className="bg-[#F59E0B]/10 border border-[#F59E0B]/20 rounded-xl p-3 text-[#92400E] text-[13px] mb-4 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-[#F59E0B]" />
+                <span>Admin has disabled this feature. Thank you.</span>
+                <button onClick={() => setShowForgotDisabled(false)} className="ml-auto text-[#92400E] hover:text-[#78350F]">
+                  <XCircle className="w-4 h-4" />
+                </button>
+              </div>
+            )}
 
-        {/* Footer */}
-        <div className="text-center mt-6 flex items-center justify-center gap-1.5">
-          <Shield className="w-3.5 h-3.5 text-[#94A3B8]" />
-          <span className="text-[#94A3B8] text-[11px] font-semibold uppercase tracking-wider">Secure Authentication</span>
-        </div>
-        <div className="text-center mt-2 flex items-center justify-center gap-4">
-          <span className="text-[#94A3B8] text-[11px]">Privacy Policy</span>
-          <span className="text-[#94A3B8] text-[11px]">Terms of Service</span>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="text-[#64748B] text-[11px] font-bold uppercase tracking-[0.1em]">Email Address</label>
+                <Input data-testid="login-email-input" type="email" value={email}
+                  onChange={(e) => { setEmail(e.target.value); setError(''); }}
+                  placeholder="name@example.com"
+                  className="mt-1.5 bg-[#F0F4FA] border-[#E2E8F0] focus:bg-white focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-xl h-11" />
+              </div>
+              <div>
+                <div className="flex justify-between items-center">
+                  <label className="text-[#64748B] text-[11px] font-bold uppercase tracking-[0.1em]">Password</label>
+                  <button 
+                    type="button"
+                    onClick={handleForgotPassword}
+                    className="text-[#CC0000] text-[12px] font-medium hover:underline"
+                    data-testid="login-forgot-password"
+                  >
+                    Forgot?
+                  </button>
+                </div>
+                <div className="relative mt-1.5">
+                  <Input data-testid="login-password-input" type={showPw ? 'text' : 'password'} value={password}
+                    onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                    placeholder="Enter password"
+                    className="bg-[#F0F4FA] border-[#E2E8F0] focus:bg-white focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-xl h-11 pr-10" />
+                  <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#0F172A]">
+                    {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <Button type="submit" data-testid="login-submit-btn" disabled={loading}
+                className="w-full bg-[#CC0000] hover:bg-[#A30000] text-white font-semibold rounded-full py-3 h-12 text-[15px] shadow-lg shadow-[#CC0000]/20 transition-all">
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Login'}
+              </Button>
+            </form>
+
+            <div className="relative my-5">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#E2E8F0]" /></div>
+              <div className="relative flex justify-center text-[11px]"><span className="bg-white px-3 text-[#94A3B8] uppercase tracking-wider">Or continue with</span></div>
+            </div>
+
+            <Button type="button" data-testid="login-google-btn" onClick={handleGoogle} disabled={googleLoading}
+              className="w-full bg-[#F0F4FA] border border-[#E2E8F0] text-[#0F172A] hover:bg-[#E2E8F0] rounded-full py-2.5 h-11 font-medium flex items-center justify-center gap-2.5">
+              {googleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><GoogleIcon /> Continue with Google</>}
+            </Button>
+
+            <p className="text-center text-[#64748B] text-[13px] mt-5">
+              New to discuss? <Link to="/register" data-testid="login-to-register-link" className="text-[#CC0000] hover:underline font-semibold">Create account</Link>
+            </p>
+          </div>
+
+          {/* Footer links */}
+          <div className="text-center mt-6 flex items-center justify-center gap-1.5">
+            <Shield className="w-3.5 h-3.5 text-[#94A3B8]" />
+            <span className="text-[#94A3B8] text-[11px] font-semibold uppercase tracking-wider">Secure Authentication</span>
+          </div>
+          <div className="text-center mt-2 flex items-center justify-center">
+            <button 
+              onClick={() => setShowTerms(true)}
+              className="text-[#94A3B8] text-[11px] hover:text-[#CC0000] hover:underline"
+              data-testid="login-terms-link"
+            >
+              Terms and Conditions
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="py-4 text-center">
+        <p className="text-[#94A3B8] text-[12px]">
+          Developed and managed by{' '}
+          <a 
+            href="https://www.linkedin.com/in/mohammed-maaz-a-0aa730217/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-[#CC0000] hover:underline font-semibold inline-flex items-center gap-1"
+          >
+            Mohammed Maaz A
+            <Linkedin className="w-3 h-3" />
+          </a>
+        </p>
+      </footer>
+
+      <TermsModal 
+        open={showTerms} 
+        onClose={() => setShowTerms(false)} 
+        showAcceptButton={false}
+      />
     </div>
   );
 }

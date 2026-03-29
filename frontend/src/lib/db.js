@@ -64,6 +64,35 @@ const extractHashtags = (text) => {
   return matches ? [...new Set(matches.map(t => t.slice(1).toLowerCase()))] : [];
 };
 
+// ==================== ADMIN SETTINGS ====================
+
+export const getAdminSettings = async () => {
+  const settingsRef = ref(database, 'admin_settings');
+  const snapshot = await get(settingsRef);
+  if (snapshot.exists()) {
+    return snapshot.val();
+  }
+  // Default settings
+  return {
+    signup_enabled: true,
+    forgot_password_enabled: true
+  };
+};
+
+export const initAdminSettings = async () => {
+  const settingsRef = ref(database, 'admin_settings');
+  const snapshot = await get(settingsRef);
+  if (!snapshot.exists()) {
+    await set(settingsRef, {
+      signup_enabled: true,
+      forgot_password_enabled: true
+    });
+  }
+};
+
+// Initialize admin settings on first load
+initAdminSettings().catch(console.error);
+
 // ==================== USER OPERATIONS ====================
 
 export const createUser = async (userId, userData) => {
@@ -105,6 +134,20 @@ export const checkUsernameAvailable = async (username) => {
     const users = snapshot.val();
     for (const user of Object.values(users)) {
       if (user.username?.toLowerCase() === username.toLowerCase()) {
+        return false;
+      }
+    }
+  }
+  return true;
+};
+
+export const checkEmailAvailable = async (email) => {
+  const usersRef = ref(database, 'users');
+  const snapshot = await get(usersRef);
+  if (snapshot.exists()) {
+    const users = snapshot.val();
+    for (const user of Object.values(users)) {
+      if (user.email?.toLowerCase() === email.toLowerCase()) {
         return false;
       }
     }

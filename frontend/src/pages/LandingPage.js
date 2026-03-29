@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
-import { ArrowRight, MessageSquare, FolderGit2, Zap, Users, Shield, ChevronRight } from 'lucide-react';
+import { ArrowRight, MessageSquare, FolderGit2, Zap, Users, Shield, Linkedin } from 'lucide-react';
 
 const LOGO_URL = 'https://customer-assets.emergentagent.com/job_8b258d09-2813-4c39-875f-1044b1a2ed97/artifacts/bnfmcn2l_rqVRL__1_-removebg-preview.png';
 
@@ -91,9 +91,36 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="py-6 px-4 border-t border-[#E2E8F0] bg-white">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          <img src={LOGO_URL} alt="Discuss" className="h-6" />
-          <p className="text-[#64748B] text-xs">&copy; {new Date().getFullYear()} Discuss. Built for developers.</p>
+        <div className="max-w-5xl mx-auto flex flex-col items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
+            <img src={LOGO_URL} alt="Discuss" className="h-6" />
+            <p className="text-[#64748B] text-xs">&copy; {new Date().getFullYear()} Discuss. Built for developers.</p>
+          </div>
+          <div className="flex flex-col items-center gap-2 pt-2 border-t border-[#E2E8F0] w-full">
+            <p className="text-[#64748B] text-[12px]">
+              Developed and managed by{' '}
+              <a 
+                href="https://www.linkedin.com/in/mohammed-maaz-a-0aa730217/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-[#CC0000] hover:underline font-semibold inline-flex items-center gap-1"
+                data-testid="footer-linkedin-link"
+              >
+                Mohammed Maaz A
+                <Linkedin className="w-3 h-3" />
+              </a>
+            </p>
+            <a 
+              href="https://www.linkedin.com/in/mohammed-maaz-a-0aa730217/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-[#0077B5] hover:bg-[#006399] text-white text-[11px] font-medium rounded-full px-4 py-1.5 transition-colors"
+              data-testid="footer-support-link"
+            >
+              <Linkedin className="w-3.5 h-3.5" />
+              Connect for Support
+            </a>
+          </div>
         </div>
       </footer>
     </div>
