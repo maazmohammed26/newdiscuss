@@ -97,8 +97,8 @@ export default function FeedPage() {
     fetchPosts(tag);
   };
 
-  const handlePostCreated = (newPost) => {
-    setPosts((prev) => [newPost, ...prev]);
+  const handlePostCreated = () => {
+    // Don't add to state - the real-time listener will pick it up automatically
     setShowCreate(false);
     fetchTrendingTags();
   };
