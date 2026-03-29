@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL;
+// Fallback to window.location.origin if REACT_APP_BACKEND_URL is not set
+const API_URL = process.env.REACT_APP_BACKEND_URL || window.location.origin;
 
 const api = axios.create({
   baseURL: `${API_URL}/api`,

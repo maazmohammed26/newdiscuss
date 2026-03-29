@@ -267,10 +267,25 @@ async def toggle_vote(post_id: str, req: VoteRequest, request: Request):
     post = fb_get(f"posts/{post_id}")
     if not post: raise HTTPException(404, "Post not found")
     existing = fb_get(f"votes/{post_id}/{user['id']}")
+    
+    # If user clicks same vote type they already have, toggle it off
     if existing == req.vote_type:
-        fb_delete(f"votes/{post_id}/{user['id']}")  # Toggle off
+        fb_delete(f"votes/{post_id}/{user['id']}")
     else:
-        fb_put(f"votes/{post_id}/{user['id']}", req.vote_type)  # Set or switch
+        # For downvotes, check if removing upvote would result in negative score
+        # Minimum score is 0, so don't allow downvotes if score would go below 0
+        if req.vote_type == "down":
+            current_votes = safe_dict(fb_get(f"votes/{post_id}"))
+            current_up = sum(1 for v in current_votes.values() if v == "up")
+            current_down = sum(1 for v in current_votes.values() if v == "down")
+            # Calculate what score would be after this vote
+            new_up = current_up - 1 if existing == "up" else current_up
+            new_down = current_down + 1 if existing != "down" else current_down
+            # If net score would go below 0, don't allow the downvote
+            if (new_up - new_down) < 0:
+                raise HTTPException(400, "Vote score cannot go below 0")
+        fb_put(f"votes/{post_id}/{user['id']}", req.vote_type)
+    
     vd = get_vote_data(post_id)
     return {"upvote_count": vd["upvote_count"], "downvote_count": vd["downvote_count"], "votes": vd["votes"]}
 
@@ -313,6 +328,14 @@ async def get_trending_hashtags(request: Request):
         if isinstance(pd, dict):
             for t in (pd.get("hashtags") or []): tc[t] = tc.get(t,0) + 1
     return [{"tag": t, "count": c} for t, c in sorted(tc.items(), key=lambda x: x[1], reverse=True)[:20]]
+
+@api_router.delete("/admin/clear-all-posts")
+async def clear_all_posts():
+    """Clear all posts, comments, and votes from the database"""
+    fb_delete("posts")
+    fb_delete("comments")
+    fb_delete("votes")
+    return {"message": "All posts, comments, and votes have been cleared"}
 
 @api_router.get("/")
 async def root(): return {"message": "Discuss API is running"}
