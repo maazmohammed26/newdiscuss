@@ -140,11 +140,11 @@ export default function RegisterPage() {
   };
 
   const statusTextColor = (status) => {
-    if (!status) return 'text-[#64748B]';
+    if (!status) return 'text-[#6275AF]';
     if (status.type === 'available') return 'text-[#10B981]';
     if (status.type === 'taken') return 'text-[#EF4444]';
     if (status.type === 'invalid') return 'text-[#F59E0B]';
-    return 'text-[#64748B]';
+    return 'text-[#6275AF]';
   };
 
   if (pageLoading || settingsLoading) {
@@ -152,7 +152,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F0F4FA] dark:bg-[#0F172A] flex flex-col">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#0F172A] flex flex-col">
       <AdminMessageBanner />
       <div className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-sm">
@@ -170,7 +170,7 @@ export default function RegisterPage() {
                 </div>
                 <h3 className="text-[#0F172A] font-semibold text-lg mb-2">Sign Up Disabled</h3>
                 <p className="text-[#64748B] text-[14px]">Admin has disabled the sign-up process. Thank you.</p>
-                <Link to="/login" className="inline-block mt-4 text-[#CC0000] hover:underline font-semibold text-[14px]">
+                <Link to="/login" className="inline-block mt-4 text-[#2563EB] hover:underline font-semibold text-[14px]">
                   Go to Login
                 </Link>
               </div>
@@ -183,7 +183,7 @@ export default function RegisterPage() {
                 )}
 
                 <Button type="button" data-testid="register-google-btn" onClick={handleGoogle} disabled={googleLoading}
-                  className="w-full bg-[#F0F4FA] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#334155] text-[#0F172A] dark:text-[#F1F5F9] hover:bg-[#E2E8F0] dark:hover:bg-[#334155] rounded-full py-2.5 h-11 font-medium flex items-center justify-center gap-2.5 mb-5">
+                  className="w-full bg-[#F5F5F7] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#334155] text-[#0F172A] dark:text-[#F1F5F9] hover:bg-[#E2E8F0] dark:hover:bg-[#334155] rounded-full py-2.5 h-11 font-medium flex items-center justify-center gap-2.5 mb-5">
                   {googleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><GoogleIcon /> Continue with Google</>}
                 </Button>
 
@@ -196,12 +196,12 @@ export default function RegisterPage() {
                   {/* Username */}
                   <div>
                     <div className="flex items-center justify-between">
-                      <label className="text-[#64748B] dark:text-[#94A3B8] text-[11px] font-bold uppercase tracking-[0.1em]">Username</label>
+                      <label className="text-[#6275AF] dark:text-[#94A3B8] text-[11px] font-bold uppercase tracking-[0.1em]">Username</label>
                       {statusIcon(usernameStatus)}
                     </div>
                     <Input data-testid="register-username-input" value={username} onChange={(e) => setUsername(e.target.value)}
                       placeholder="Choose a username"
-                      className={`mt-1 bg-[#F0F4FA] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#64748B] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#3B82F6] rounded-xl h-11 ${statusColor(usernameStatus)}`} />
+                      className={`mt-1 bg-[#F5F5F7] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#6275AF] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#2563EB] rounded-xl h-11 ${statusColor(usernameStatus)}`} />
                     {usernameStatus?.msg && (
                       <p className={`text-[11px] mt-1 flex items-center gap-1 ${statusTextColor(usernameStatus)}`}>
                         {usernameStatus.msg}
@@ -212,12 +212,12 @@ export default function RegisterPage() {
                   {/* Email */}
                   <div>
                     <div className="flex items-center justify-between">
-                      <label className="text-[#64748B] dark:text-[#94A3B8] text-[11px] font-bold uppercase tracking-[0.1em]">Email</label>
+                      <label className="text-[#6275AF] dark:text-[#94A3B8] text-[11px] font-bold uppercase tracking-[0.1em]">Email</label>
                       {statusIcon(emailStatus)}
                     </div>
                     <Input data-testid="register-email-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                       placeholder="name@example.com"
-                      className={`mt-1 bg-[#F0F4FA] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#64748B] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#3B82F6] rounded-xl h-11 ${statusColor(emailStatus)}`} />
+                      className={`mt-1 bg-[#F5F5F7] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#6275AF] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#2563EB] rounded-xl h-11 ${statusColor(emailStatus)}`} />
                     {emailStatus?.msg && (
                       <p className={`text-[11px] mt-1 flex items-center gap-1 ${statusTextColor(emailStatus)}`}>
                         {emailStatus.msg}
@@ -227,12 +227,12 @@ export default function RegisterPage() {
 
                   {/* Password */}
                   <div>
-                    <label className="text-[#64748B] dark:text-[#94A3B8] text-[11px] font-bold uppercase tracking-[0.1em]">Password</label>
+                    <label className="text-[#6275AF] dark:text-[#94A3B8] text-[11px] font-bold uppercase tracking-[0.1em]">Password</label>
                     <div className="relative mt-1">
                       <Input data-testid="register-password-input" type={showPw ? 'text' : 'password'} value={password}
                         onChange={(e) => setPassword(e.target.value)} placeholder="6+ characters"
-                        className="bg-[#F0F4FA] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#64748B] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#3B82F6] rounded-xl h-11 pr-10" />
-                      <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] dark:text-[#94A3B8]">
+                        className="bg-[#F5F5F7] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#6275AF] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#2563EB] rounded-xl h-11 pr-10" />
+                      <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6275AF] dark:text-[#94A3B8]">
                         {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
@@ -240,10 +240,10 @@ export default function RegisterPage() {
 
                   {/* Confirm Password */}
                   <div>
-                    <label className="text-[#64748B] dark:text-[#94A3B8] text-[11px] font-bold uppercase tracking-[0.1em]">Confirm Password</label>
+                    <label className="text-[#6275AF] dark:text-[#94A3B8] text-[11px] font-bold uppercase tracking-[0.1em]">Confirm Password</label>
                     <Input data-testid="register-confirm-password-input" type="password" value={confirmPw}
                       onChange={(e) => setConfirmPw(e.target.value)} placeholder="Repeat password"
-                      className="mt-1 bg-[#F0F4FA] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#64748B] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#3B82F6] rounded-xl h-11" />
+                      className="mt-1 bg-[#F5F5F7] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#6275AF] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#2563EB] rounded-xl h-11" />
                     {confirmPw && password !== confirmPw && (
                       <span className="text-[#EF4444] text-[11px] mt-1 flex items-center gap-1">
                         <XCircle className="w-3 h-3" />Passwords don't match
@@ -258,16 +258,16 @@ export default function RegisterPage() {
                       id="terms"
                       checked={termsAccepted}
                       onChange={() => {}}
-                      className="mt-1 w-4 h-4 accent-[#CC0000] cursor-pointer"
+                      className="mt-1 w-4 h-4 accent-[#2563EB] cursor-pointer"
                       data-testid="register-terms-checkbox"
                       readOnly
                     />
-                    <label htmlFor="terms" className="text-[#64748B] dark:text-[#94A3B8] text-[13px]">
+                    <label htmlFor="terms" className="text-[#6275AF] dark:text-[#94A3B8] text-[13px]">
                       I agree to the{' '}
                       <button
                         type="button"
                         onClick={() => setShowTerms(true)}
-                        className="text-[#CC0000] hover:underline font-semibold"
+                        className="text-[#2563EB] hover:underline font-semibold"
                         data-testid="register-terms-link"
                       >
                         Terms and Conditions
@@ -282,7 +282,7 @@ export default function RegisterPage() {
                   </Button>
                 </form>
 
-                <p className="text-center text-[#64748B] dark:text-[#94A3B8] text-[13px] mt-5">
+                <p className="text-center text-[#6275AF] dark:text-[#94A3B8] text-[13px] mt-5">
                   Already have an account?{' '}
                   <Link to="/login" data-testid="register-to-login-link" className="text-[#CC0000] hover:underline font-semibold">
                     Login

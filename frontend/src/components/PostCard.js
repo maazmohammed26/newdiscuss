@@ -110,8 +110,8 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
             <span data-testid={`post-badge-${post.id}`}
               className={isProject
-                ? 'bg-[#3B82F6]/10 text-[#3B82F6] border border-[#3B82F6]/20 rounded-full px-2.5 py-0.5 text-xs font-semibold shrink-0'
-                : 'bg-[#FF6B6B]/10 text-[#CC0000] dark:text-[#FF6B6B] border border-[#FF6B6B]/20 rounded-full px-2.5 py-0.5 text-xs font-semibold shrink-0'
+                ? 'bg-[#3B82F6]/10 text-[#2563EB] border border-[#3B82F6]/20 rounded-full px-2.5 py-0.5 text-xs font-semibold shrink-0'
+                : 'bg-[#2563EB]/10 text-[#2563EB] dark:text-[#60A5FA] border border-[#2563EB]/20 rounded-full px-2.5 py-0.5 text-xs font-semibold shrink-0'
               }>
               {isProject ? 'Project' : 'Discussion'}
             </span>
@@ -120,7 +120,7 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
           </div>
           {isAuthor && !editing && (
             <div className="flex items-center gap-0.5 shrink-0">
-              <button data-testid={`post-edit-btn-${post.id}`} onClick={() => setEditing(true)} className="p-1.5 rounded-lg hover:bg-[#F0F4FA] dark:hover:bg-[#334155] text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white transition-colors">
+              <button data-testid={`post-edit-btn-${post.id}`} onClick={() => setEditing(true)} className="p-1.5 rounded-lg hover:bg-[#F5F5F7] dark:hover:bg-[#334155] text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white transition-colors">
                 <Pencil className="w-3.5 h-3.5" />
               </button>
               <button data-testid={`post-delete-btn-${post.id}`} onClick={() => setShowDeleteConfirm(true)} className="p-1.5 rounded-lg hover:bg-[#EF4444]/10 text-[#94A3B8] hover:text-[#EF4444] transition-colors">
@@ -133,19 +133,19 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
         {/* Body */}
         {editing ? (
           <div className="space-y-3">
-            {isProject && <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Project title" className="bg-[#F0F4FA] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#3B82F6] rounded-xl" />}
-            <Textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} placeholder="Content" rows={3} className="bg-[#F0F4FA] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#3B82F6] rounded-xl resize-none" />
+            {isProject && <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Project title" className="bg-[#F5F5F7] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#2563EB] rounded-xl" />}
+            <Textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} placeholder="Content" rows={3} className="bg-[#F5F5F7] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#2563EB] rounded-xl resize-none" />
             {isProject && (
               <>
-                <Input value={editGithub} onChange={(e) => setEditGithub(e.target.value)} placeholder="GitHub link" className="bg-[#F0F4FA] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] rounded-xl" />
-                <Input value={editPreview} onChange={(e) => setEditPreview(e.target.value)} placeholder="Live preview link" className="bg-[#F0F4FA] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] rounded-xl" />
+                <Input value={editGithub} onChange={(e) => setEditGithub(e.target.value)} placeholder="GitHub link" className="bg-[#F5F5F7] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] rounded-xl" />
+                <Input value={editPreview} onChange={(e) => setEditPreview(e.target.value)} placeholder="Live preview link" className="bg-[#F5F5F7] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] rounded-xl" />
               </>
             )}
             <div className="flex gap-2">
-              <Button data-testid={`post-save-edit-${post.id}`} onClick={handleSaveEdit} disabled={saving} className="bg-[#CC0000] text-white hover:bg-[#A30000] rounded-full px-4 py-1.5 text-[13px] font-medium">
+              <Button data-testid={`post-save-edit-${post.id}`} onClick={handleSaveEdit} disabled={saving} className="bg-[#2563EB] text-white hover:bg-[#1D4ED8] rounded-full px-4 py-1.5 text-[13px] font-medium">
                 {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Check className="w-3.5 h-3.5 mr-1" /> Save</>}
               </Button>
-              <Button onClick={() => setEditing(false)} variant="ghost" className="hover:bg-[#F0F4FA] dark:hover:bg-[#334155] text-[#64748B] dark:text-[#94A3B8] rounded-full px-4 py-1.5 text-[13px]">
+              <Button onClick={() => setEditing(false)} variant="ghost" className="hover:bg-[#F5F5F7] dark:hover:bg-[#334155] text-[#6275AF] dark:text-[#94A3B8] rounded-full px-4 py-1.5 text-[13px]">
                 <X className="w-3.5 h-3.5 mr-1" /> Cancel
               </Button>
             </div>
@@ -163,7 +163,7 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
               <div className="flex flex-wrap gap-1.5 mt-3">
                 {hashtags.map((tag) => (
                   <button key={tag} data-testid={`post-hashtag-${tag}`} onClick={() => onTagClick?.(tag)}
-                    className="inline-flex items-center gap-0.5 bg-[#F0F4FA] dark:bg-[#0F172A] hover:bg-[#3B82F6]/10 rounded-full px-2.5 py-1 text-xs font-medium text-[#64748B] dark:text-[#94A3B8] hover:text-[#3B82F6] transition-all">
+                    className="inline-flex items-center gap-0.5 bg-[#F5F5F7] dark:bg-[#0F172A] hover:bg-[#3B82F6]/10 rounded-full px-2.5 py-1 text-xs font-medium text-[#6275AF] dark:text-[#94A3B8] hover:text-[#2563EB] transition-all">
                     <Hash className="w-3 h-3" />{tag}
                   </button>
                 ))}
@@ -200,7 +200,7 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all ${
               userVote === 'up' 
                 ? 'bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/30' 
-                : 'text-[#64748B] dark:text-[#94A3B8] hover:bg-[#10B981]/5 hover:text-[#10B981] border border-transparent'
+                : 'text-[#6275AF] dark:text-[#94A3B8] hover:bg-[#10B981]/5 hover:text-[#10B981] border border-transparent'
             }`}
           >
             <ThumbsUp className="w-4 h-4" fill={userVote === 'up' ? 'currentColor' : 'none'} />
@@ -214,7 +214,7 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all ${
               userVote === 'down' 
                 ? 'bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/30' 
-                : 'text-[#64748B] dark:text-[#94A3B8] hover:bg-[#EF4444]/5 hover:text-[#EF4444] border border-transparent'
+                : 'text-[#6275AF] dark:text-[#94A3B8] hover:bg-[#EF4444]/5 hover:text-[#EF4444] border border-transparent'
             }`}
           >
             <ThumbsDown className="w-4 h-4" fill={userVote === 'down' ? 'currentColor' : 'none'} />
@@ -224,13 +224,13 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
           <div className="w-px h-4 bg-[#E2E8F0] dark:bg-[#334155] mx-1" />
 
           <button data-testid={`post-comments-btn-${post.id}`} onClick={() => setShowComments(!showComments)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] font-medium text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F0F4FA] dark:hover:bg-[#334155] hover:text-[#0F172A] dark:hover:text-white transition-colors">
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] font-medium text-[#6275AF] dark:text-[#94A3B8] hover:bg-[#F5F5F7] dark:hover:bg-[#334155] hover:text-[#0F172A] dark:hover:text-white transition-colors">
             <MessageSquare className="w-4 h-4" />
             <span data-testid={`post-comment-count-${post.id}`}>{post.comment_count || 0}</span>
           </button>
 
           <button data-testid={`post-share-btn-${post.id}`} onClick={() => setShowShare(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] font-medium text-[#64748B] dark:text-[#94A3B8] hover:bg-[#F0F4FA] dark:hover:bg-[#334155] hover:text-[#0F172A] dark:hover:text-white transition-colors">
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] font-medium text-[#6275AF] dark:text-[#94A3B8] hover:bg-[#F5F5F7] dark:hover:bg-[#334155] hover:text-[#0F172A] dark:hover:text-white transition-colors">
             <Share2 className="w-4 h-4" />
             <span className="hidden sm:inline">Share</span>
           </button>

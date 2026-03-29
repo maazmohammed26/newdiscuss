@@ -20,16 +20,16 @@ export default function Header() {
           {user ? (
             <>
               <Link to="/feed">
-                <Button variant="ghost" data-testid="header-feed-btn" className="text-[#64748B] dark:text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white hover:bg-[#F0F4FA] dark:hover:bg-[#1E293B] rounded-full px-4 text-[13px] font-medium">
+                <Button variant="ghost" data-testid="header-feed-btn" className="text-[#6275AF] dark:text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white hover:bg-[#F5F5F7] dark:hover:bg-[#1E293B] rounded-full px-4 text-[13px] font-medium">
                   Feed
                 </Button>
               </Link>
               <Link to="/profile">
-                <Button variant="ghost" data-testid="header-profile-btn" className="w-9 h-9 p-0 rounded-full bg-[#F0F4FA] dark:bg-[#1E293B] hover:bg-[#E2E8F0] dark:hover:bg-[#334155]">
+                <Button variant="ghost" data-testid="header-profile-btn" className="w-9 h-9 p-0 rounded-full bg-[#F5F5F7] dark:bg-[#1E293B] hover:bg-[#E2E8F0] dark:hover:bg-[#334155]">
                   {user.photo_url ? (
                     <img src={user.photo_url} alt="" className="w-full h-full rounded-full object-cover" />
                   ) : (
-                    <User className="w-4 h-4 text-[#64748B] dark:text-[#94A3B8]" />
+                    <User className="w-4 h-4 text-[#6275AF] dark:text-[#94A3B8]" />
                   )}
                 </Button>
               </Link>
@@ -37,12 +37,12 @@ export default function Header() {
           ) : isLanding ? (
             <>
               <Link to="/login">
-                <Button variant="ghost" data-testid="header-login-btn" className="text-[#64748B] dark:text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white hover:bg-[#F0F4FA] dark:hover:bg-[#1E293B] rounded-full px-4 text-[13px] font-medium">
+                <Button variant="ghost" data-testid="header-login-btn" className="text-[#6275AF] dark:text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white hover:bg-[#F5F5F7] dark:hover:bg-[#1E293B] rounded-full px-4 text-[13px] font-medium">
                   Login
                 </Button>
               </Link>
               <Link to="/register">
-                <Button data-testid="header-register-btn" className="bg-[#CC0000] text-white hover:bg-[#A30000] rounded-full px-5 text-[13px] font-medium shadow-sm">
+                <Button data-testid="header-register-btn" className="bg-[#2563EB] text-white hover:bg-[#1D4ED8] rounded-full px-5 text-[13px] font-medium shadow-sm">
                   Register
                 </Button>
               </Link>

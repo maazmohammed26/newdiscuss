@@ -4,7 +4,6 @@ import { getPosts, getTrendingHashtags, subscribeToPostsRealtime } from '@/lib/d
 import Header from '@/components/Header';
 import PostCard from '@/components/PostCard';
 import CreatePostModal from '@/components/CreatePostModal';
-import AdminMessageBanner from '@/components/AdminMessageBanner';
 import LoadingScreen from '@/components/LoadingScreen';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -134,9 +133,8 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F0F4FA] dark:bg-[#0F172A]">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#0F172A]">
       <Header />
-      <AdminMessageBanner />
       
       {isOffline && (
         <div data-testid="offline-banner" className="bg-[#F59E0B]/10 border-b border-[#F59E0B]/20 py-2 px-4 flex items-center justify-center gap-2">
@@ -152,7 +150,7 @@ export default function FeedPage() {
           <Button
             data-testid="create-post-btn"
             onClick={() => setShowCreate(true)}
-            className="bg-[#CC0000] text-white hover:bg-[#A30000] rounded-md px-4 py-2 font-medium shadow-sm"
+            className="bg-[#2563EB] text-white hover:bg-[#1D4ED8] rounded-md px-4 py-2 font-medium shadow-sm"
           >
             <Plus className="w-4 h-4 mr-1.5" /> New Post
           </Button>
@@ -165,8 +163,8 @@ export default function FeedPage() {
             onClick={() => setActiveTab('discussion')}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${
               activeTab === 'discussion'
-                ? 'bg-[#CC0000] text-white shadow-sm'
-                : 'text-[#64748B] dark:text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white hover:bg-[#F0F4FA] dark:hover:bg-[#334155]'
+                ? 'bg-[#2563EB] text-white shadow-sm'
+                : 'text-[#6275AF] dark:text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white hover:bg-[#F5F5F7] dark:hover:bg-[#334155]'
             }`}
           >
             <MessageSquare className="w-4 h-4" />
@@ -177,8 +175,8 @@ export default function FeedPage() {
             onClick={() => setActiveTab('project')}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${
               activeTab === 'project'
-                ? 'bg-[#3B82F6] text-white shadow-sm'
-                : 'text-[#64748B] dark:text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white hover:bg-[#F0F4FA] dark:hover:bg-[#334155]'
+                ? 'bg-[#BC4800] text-white shadow-sm'
+                : 'text-[#6275AF] dark:text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white hover:bg-[#F5F5F7] dark:hover:bg-[#334155]'
             }`}
           >
             <FolderGit2 className="w-4 h-4" />
@@ -189,13 +187,13 @@ export default function FeedPage() {
         {/* Search bar */}
         <form onSubmit={handleSearch} className="mb-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B] dark:text-[#94A3B8]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6275AF] dark:text-[#94A3B8]" />
             <Input
               data-testid="feed-search-input"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={`Search ${activeTab === 'discussion' ? 'discussions' : 'projects'}...`}
-              className="pl-10 pr-10 bg-white dark:bg-[#1E293B] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#64748B] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-xl text-[13px] md:text-[15px] h-10"
+              className="pl-10 pr-10 bg-white dark:bg-[#1E293B] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#6275AF] focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 rounded-xl text-[13px] md:text-[15px] h-10"
             />
             {(searchQuery || activeSearch) && (
               <button
@@ -212,12 +210,12 @@ export default function FeedPage() {
 
         {/* Active search indicator */}
         {activeSearch && (
-          <div data-testid="active-search-badge" className="flex items-center gap-2 mb-4 bg-[#3B82F6]/8 dark:bg-[#3B82F6]/15 border border-[#3B82F6]/15 dark:border-[#3B82F6]/30 rounded-lg px-3 py-2">
-            <Search className="w-3.5 h-3.5 text-[#3B82F6]" />
-            <span className="text-[#3B82F6] text-[13px] font-medium">
+          <div data-testid="active-search-badge" className="flex items-center gap-2 mb-4 bg-[#2563EB]/8 dark:bg-[#3B82F6]/15 border border-[#3B82F6]/15 dark:border-[#3B82F6]/30 rounded-lg px-3 py-2">
+            <Search className="w-3.5 h-3.5 text-[#2563EB]" />
+            <span className="text-[#2563EB] text-[13px] font-medium">
               Showing results for "{activeSearch}" in {activeTab === 'discussion' ? 'Discussions' : 'Projects'}
             </span>
-            <button onClick={handleClearSearch} className="ml-auto text-[#3B82F6] hover:text-[#2563EB]">
+            <button onClick={handleClearSearch} className="ml-auto text-[#2563EB] hover:text-[#2563EB]">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -227,8 +225,8 @@ export default function FeedPage() {
         {trendingTags.length > 0 && !activeSearch && (
           <div data-testid="trending-tags" className="mb-5">
             <div className="flex items-center gap-1.5 mb-2">
-              <TrendingUp className="w-3.5 h-3.5 text-[#64748B] dark:text-[#94A3B8]" />
-              <span className="text-[#64748B] dark:text-[#94A3B8] text-xs font-semibold uppercase tracking-wider">Trending</span>
+              <TrendingUp className="w-3.5 h-3.5 text-[#6275AF] dark:text-[#94A3B8]" />
+              <span className="text-[#6275AF] dark:text-[#94A3B8] text-xs font-semibold uppercase tracking-wider">Trending</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {trendingTags.slice(0, 4).map((t) => (
@@ -236,7 +234,7 @@ export default function FeedPage() {
                   key={t.tag}
                   data-testid={`trending-tag-${t.tag}`}
                   onClick={() => handleTagClick(t.tag)}
-                  className="inline-flex items-center gap-1 bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] hover:border-[#3B82F6]/30 hover:bg-[#3B82F6]/5 dark:hover:bg-[#3B82F6]/10 rounded-full px-2.5 py-1 text-xs font-medium text-[#64748B] dark:text-[#94A3B8] hover:text-[#3B82F6] transition-all"
+                  className="inline-flex items-center gap-1 bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] hover:border-[#3B82F6]/30 hover:bg-[#3B82F6]/5 dark:hover:bg-[#3B82F6]/10 rounded-full px-2.5 py-1 text-xs font-medium text-[#6275AF] dark:text-[#94A3B8] hover:text-[#2563EB] transition-all"
                 >
                   <Hash className="w-3 h-3" />
                   {t.tag}
@@ -256,15 +254,15 @@ export default function FeedPage() {
           <div data-testid="empty-feed" className="text-center py-20">
             <div className="w-16 h-16 rounded-full bg-[#F1F5F9] dark:bg-[#1E293B] flex items-center justify-center mx-auto mb-4">
               {activeTab === 'discussion' ? (
-                <MessageSquare className="w-7 h-7 text-[#64748B] dark:text-[#94A3B8]" />
+                <MessageSquare className="w-7 h-7 text-[#6275AF] dark:text-[#94A3B8]" />
               ) : (
-                <FolderGit2 className="w-7 h-7 text-[#64748B] dark:text-[#94A3B8]" />
+                <FolderGit2 className="w-7 h-7 text-[#6275AF] dark:text-[#94A3B8]" />
               )}
             </div>
             <h3 className="text-lg font-semibold text-[#0F172A] dark:text-[#F1F5F9] mb-1">
               {activeSearch ? 'No results found' : `No ${activeTab === 'discussion' ? 'discussions' : 'projects'} yet`}
             </h3>
-            <p className="text-[#64748B] dark:text-[#94A3B8] text-[13px] md:text-[15px]">
+            <p className="text-[#6275AF] dark:text-[#94A3B8] text-[13px] md:text-[15px]">
               {activeSearch ? `Try a different search term` : `Be the first to start a ${activeTab === 'discussion' ? 'discussion' : 'project post'}!`}
             </p>
           </div>

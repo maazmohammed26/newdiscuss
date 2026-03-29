@@ -15,7 +15,7 @@ export default function ThemeToggle() {
         role="switch"
         aria-checked={isDark}
         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none ${
-          isDark ? 'bg-[#CC0000]' : 'bg-[#D1D5DB]'
+          isDark ? 'bg-[#2563EB]' : 'bg-[#D1D5DB]'
         }`}
       >
         <span

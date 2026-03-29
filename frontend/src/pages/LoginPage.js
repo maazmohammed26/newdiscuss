@@ -68,7 +68,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F0F4FA] dark:bg-[#0F172A] flex flex-col">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#0F172A] flex flex-col">
       <AdminMessageBanner />
       <div className="flex-1 flex items-center justify-center px-4">
         <div className="w-full max-w-sm">
@@ -99,19 +99,19 @@ export default function LoginPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="text-[#64748B] dark:text-[#94A3B8] text-[11px] font-bold uppercase tracking-[0.1em]">Email Address</label>
+                <label className="text-[#6275AF] dark:text-[#94A3B8] text-[11px] font-bold uppercase tracking-[0.1em]">Email Address</label>
                 <Input data-testid="login-email-input" type="email" value={email}
                   onChange={(e) => { setEmail(e.target.value); setError(''); }}
                   placeholder="name@example.com"
-                  className="mt-1.5 bg-[#F0F4FA] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#64748B] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-xl h-11" />
+                  className="mt-1.5 bg-[#F5F5F7] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#6275AF] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 rounded-xl h-11" />
               </div>
               <div>
                 <div className="flex justify-between items-center">
-                  <label className="text-[#64748B] dark:text-[#94A3B8] text-[11px] font-bold uppercase tracking-[0.1em]">Password</label>
+                  <label className="text-[#6275AF] dark:text-[#94A3B8] text-[11px] font-bold uppercase tracking-[0.1em]">Password</label>
                   <button 
                     type="button"
                     onClick={handleForgotPassword}
-                    className="text-[#CC0000] text-[12px] font-medium hover:underline"
+                    className="text-[#2563EB] text-[12px] font-medium hover:underline"
                     data-testid="login-forgot-password"
                   >
                     Forgot?
@@ -121,14 +121,14 @@ export default function LoginPage() {
                   <Input data-testid="login-password-input" type={showPw ? 'text' : 'password'} value={password}
                     onChange={(e) => { setPassword(e.target.value); setError(''); }}
                     placeholder="Enter password"
-                    className="bg-[#F0F4FA] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#64748B] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-xl h-11 pr-10" />
-                  <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] dark:text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white">
+                    className="bg-[#F5F5F7] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#6275AF] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 rounded-xl h-11 pr-10" />
+                  <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6275AF] dark:text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white">
                     {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
               <Button type="submit" data-testid="login-submit-btn" disabled={loading}
-                className="w-full bg-[#CC0000] hover:bg-[#A30000] text-white font-semibold rounded-full py-3 h-12 text-[15px] shadow-lg shadow-[#CC0000]/20 transition-all">
+                className="w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold rounded-full py-3 h-12 text-[15px] shadow-lg shadow-[#2563EB]/20 transition-all">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Login'}
               </Button>
             </form>
@@ -139,12 +139,12 @@ export default function LoginPage() {
             </div>
 
             <Button type="button" data-testid="login-google-btn" onClick={handleGoogle} disabled={googleLoading}
-              className="w-full bg-[#F0F4FA] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#334155] text-[#0F172A] dark:text-[#F1F5F9] hover:bg-[#E2E8F0] dark:hover:bg-[#334155] rounded-full py-2.5 h-11 font-medium flex items-center justify-center gap-2.5">
+              className="w-full bg-[#F5F5F7] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#334155] text-[#0F172A] dark:text-[#F1F5F9] hover:bg-[#E2E8F0] dark:hover:bg-[#334155] rounded-full py-2.5 h-11 font-medium flex items-center justify-center gap-2.5">
               {googleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><GoogleIcon /> Continue with Google</>}
             </Button>
 
-            <p className="text-center text-[#64748B] dark:text-[#94A3B8] text-[13px] mt-5">
-              New to discuss? <Link to="/register" data-testid="login-to-register-link" className="text-[#CC0000] hover:underline font-semibold">Create account</Link>
+            <p className="text-center text-[#6275AF] dark:text-[#94A3B8] text-[13px] mt-5">
+              New to discuss? <Link to="/register" data-testid="login-to-register-link" className="text-[#2563EB] hover:underline font-semibold">Create account</Link>
             </p>
           </div>
 
@@ -156,7 +156,7 @@ export default function LoginPage() {
           <div className="text-center mt-2 flex items-center justify-center">
             <button 
               onClick={() => setShowTerms(true)}
-              className="text-[#94A3B8] text-[11px] hover:text-[#CC0000] hover:underline"
+              className="text-[#94A3B8] text-[11px] hover:text-[#2563EB] hover:underline"
               data-testid="login-terms-link"
             >
               Terms and Conditions
@@ -169,7 +169,7 @@ export default function LoginPage() {
       <footer className="py-4 text-center">
         <p className="text-[#94A3B8] text-[12px]">
           Developed by{' '}
-          <span className="text-[#CC0000] font-semibold">&lt;Mohammed Maaz A&gt;</span>
+          <span className="text-[#BC4800] font-semibold">&lt;Mohammed Maaz A&gt;</span>
         </p>
       </footer>
 
