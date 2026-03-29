@@ -34,8 +34,8 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#F0F4FA]">
-      <AdminMessageBanner />
       <Header />
+      <AdminMessageBanner />
       <PWAInstallBanner />
 
       {/* Hero */}
