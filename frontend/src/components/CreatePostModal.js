@@ -59,47 +59,47 @@ export default function CreatePostModal({ open, onClose, onCreated }) {
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) { onClose(); reset(); } }}>
-      <DialogContent className="sm:max-w-lg bg-white">
+      <DialogContent className="sm:max-w-lg bg-white dark:bg-[#1E293B] dark:border-[#334155]">
         <DialogHeader>
-          <DialogTitle className="font-heading text-xl font-bold text-[#0F172A]">Create a post</DialogTitle>
+          <DialogTitle className="font-heading text-xl font-bold text-[#0F172A] dark:text-[#F1F5F9]">Create a post</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
           {error && <div data-testid="create-post-error" className="bg-[#EF4444]/8 border border-[#EF4444]/20 rounded-md p-3 text-[#EF4444] text-[13px]">{error}</div>}
 
           <div className="grid grid-cols-2 gap-3">
             <button type="button" data-testid="create-post-type-discussion" onClick={() => setPostType('discussion')}
-              className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all ${postType === 'discussion' ? 'border-[#CC0000] bg-[#CC0000]/5' : 'border-[#E2E8F0] hover:border-[#CC0000]/30'}`}>
-              <MessageSquare className={`w-5 h-5 ${postType === 'discussion' ? 'text-[#CC0000]' : 'text-[#64748B]'}`} />
-              <span className={`text-[13px] md:text-[15px] font-medium ${postType === 'discussion' ? 'text-[#CC0000]' : 'text-[#64748B]'}`}>Discussion</span>
+              className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all ${postType === 'discussion' ? 'border-[#CC0000] bg-[#CC0000]/5' : 'border-[#E2E8F0] dark:border-[#334155] hover:border-[#CC0000]/30'}`}>
+              <MessageSquare className={`w-5 h-5 ${postType === 'discussion' ? 'text-[#CC0000]' : 'text-[#64748B] dark:text-[#94A3B8]'}`} />
+              <span className={`text-[13px] md:text-[15px] font-medium ${postType === 'discussion' ? 'text-[#CC0000]' : 'text-[#64748B] dark:text-[#94A3B8]'}`}>Discussion</span>
             </button>
             <button type="button" data-testid="create-post-type-project" onClick={() => setPostType('project')}
-              className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all ${postType === 'project' ? 'border-[#3B82F6] bg-[#3B82F6]/5' : 'border-[#E2E8F0] hover:border-[#3B82F6]/30'}`}>
-              <FolderGit2 className={`w-5 h-5 ${postType === 'project' ? 'text-[#3B82F6]' : 'text-[#64748B]'}`} />
-              <span className={`text-[13px] md:text-[15px] font-medium ${postType === 'project' ? 'text-[#3B82F6]' : 'text-[#64748B]'}`}>Project</span>
+              className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all ${postType === 'project' ? 'border-[#3B82F6] bg-[#3B82F6]/5' : 'border-[#E2E8F0] dark:border-[#334155] hover:border-[#3B82F6]/30'}`}>
+              <FolderGit2 className={`w-5 h-5 ${postType === 'project' ? 'text-[#3B82F6]' : 'text-[#64748B] dark:text-[#94A3B8]'}`} />
+              <span className={`text-[13px] md:text-[15px] font-medium ${postType === 'project' ? 'text-[#3B82F6]' : 'text-[#64748B] dark:text-[#94A3B8]'}`}>Project</span>
             </button>
           </div>
 
           {/* Title only for project posts */}
           {postType === 'project' && (
             <div>
-              <Label className="text-[#0F172A] text-[13px] md:text-[15px] font-medium">Project Title</Label>
+              <Label className="text-[#0F172A] dark:text-[#F1F5F9] text-[13px] md:text-[15px] font-medium">Project Title</Label>
               <Input data-testid="create-post-title" value={title} onChange={(e) => setTitle(e.target.value)}
-                placeholder="Your project name" className="mt-1.5 bg-[#F1F5F9] border-transparent focus:bg-white focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-md" />
+                placeholder="Your project name" className="mt-1.5 bg-[#F1F5F9] dark:bg-[#0F172A] border-transparent dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#64748B] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-md" />
             </div>
           )}
 
           <div>
-            <Label className="text-[#0F172A] text-[13px] md:text-[15px] font-medium">
+            <Label className="text-[#0F172A] dark:text-[#F1F5F9] text-[13px] md:text-[15px] font-medium">
               {postType === 'project' ? 'Description' : "What's on your mind?"}
             </Label>
             <Textarea data-testid="create-post-content" value={content} onChange={(e) => setContent(e.target.value)}
               placeholder={postType === 'project' ? 'Describe your project... (use #hashtags inline)' : 'Share your thoughts, ideas, questions... (use #hashtags inline)'}
-              rows={postType === 'discussion' ? 5 : 4} className="mt-1.5 bg-[#F1F5F9] border-transparent focus:bg-white focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-md resize-none" />
+              rows={postType === 'discussion' ? 5 : 4} className="mt-1.5 bg-[#F1F5F9] dark:bg-[#0F172A] border-transparent dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#64748B] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-md resize-none" />
           </div>
 
           {/* Hashtags */}
           <div>
-            <Label className="text-[#0F172A] text-[13px] md:text-[15px] font-medium">Hashtags</Label>
+            <Label className="text-[#0F172A] dark:text-[#F1F5F9] text-[13px] md:text-[15px] font-medium">Hashtags</Label>
             <div className="mt-1.5">
               {hashtags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-2">
@@ -114,24 +114,24 @@ export default function CreatePostModal({ open, onClose, onCreated }) {
               <div className="flex gap-2">
                 <Input data-testid="create-post-hashtag-input" value={hashtagInput} onChange={(e) => setHashtagInput(e.target.value)}
                   onKeyDown={handleHashtagKeyDown} placeholder="Type a tag and press Enter"
-                  className="flex-1 bg-[#F1F5F9] border-transparent focus:bg-white focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-md text-[13px]" />
-                <Button type="button" onClick={addHashtag} variant="outline" className="border-[#E2E8F0] text-[#64748B] hover:text-[#3B82F6] rounded-md px-3"><Hash className="w-4 h-4" /></Button>
+                  className="flex-1 bg-[#F1F5F9] dark:bg-[#0F172A] border-transparent dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#64748B] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-md text-[13px]" />
+                <Button type="button" onClick={addHashtag} variant="outline" className="border-[#E2E8F0] dark:border-[#334155] text-[#64748B] dark:text-[#94A3B8] hover:text-[#3B82F6] rounded-md px-3"><Hash className="w-4 h-4" /></Button>
               </div>
-              <p className="text-[#64748B] text-[11px] mt-1">Press Enter, Space, or comma to add. Hashtags in content are auto-detected.</p>
+              <p className="text-[#64748B] dark:text-[#94A3B8] text-[11px] mt-1">Press Enter, Space, or comma to add. Hashtags in content are auto-detected.</p>
             </div>
           </div>
 
           {postType === 'project' && (
             <>
               <div>
-                <Label className="text-[#0F172A] text-[13px] md:text-[15px] font-medium">GitHub Link</Label>
+                <Label className="text-[#0F172A] dark:text-[#F1F5F9] text-[13px] md:text-[15px] font-medium">GitHub Link</Label>
                 <Input data-testid="create-post-github" value={githubLink} onChange={(e) => setGithubLink(e.target.value)}
-                  placeholder="https://github.com/..." className="mt-1.5 bg-[#F1F5F9] border-transparent focus:bg-white focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-md" />
+                  placeholder="https://github.com/..." className="mt-1.5 bg-[#F1F5F9] dark:bg-[#0F172A] border-transparent dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#64748B] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-md" />
               </div>
               <div>
-                <Label className="text-[#0F172A] text-[13px] md:text-[15px] font-medium">Live Preview Link</Label>
+                <Label className="text-[#0F172A] dark:text-[#F1F5F9] text-[13px] md:text-[15px] font-medium">Live Preview Link</Label>
                 <Input data-testid="create-post-preview" value={previewLink} onChange={(e) => setPreviewLink(e.target.value)}
-                  placeholder="https://your-app.com" className="mt-1.5 bg-[#F1F5F9] border-transparent focus:bg-white focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-md" />
+                  placeholder="https://your-app.com" className="mt-1.5 bg-[#F1F5F9] dark:bg-[#0F172A] border-transparent dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#64748B] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-md" />
               </div>
             </>
           )}

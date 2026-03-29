@@ -68,7 +68,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F0F4FA] flex flex-col">
+    <div className="min-h-screen bg-[#F0F4FA] dark:bg-[#0F172A] flex flex-col">
       <AdminMessageBanner />
       <div className="flex-1 flex items-center justify-center px-4">
         <div className="w-full max-w-sm">
@@ -80,7 +80,7 @@ export default function LoginPage() {
           </div>
 
           {/* Card */}
-          <div className="bg-white rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-6 md:p-8">
+          <div className="bg-white dark:bg-[#1E293B] rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] dark:shadow-none p-6 md:p-8">
             {error && (
               <div data-testid="login-error" className="bg-[#EF4444]/8 border border-[#EF4444]/15 rounded-xl p-3 text-[#EF4444] text-[13px] mb-4 flex items-start gap-2">
                 <XCircle className="w-4 h-4 shrink-0 mt-0.5" /><span>{error}</span>
@@ -99,15 +99,15 @@ export default function LoginPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="text-[#64748B] text-[11px] font-bold uppercase tracking-[0.1em]">Email Address</label>
+                <label className="text-[#64748B] dark:text-[#94A3B8] text-[11px] font-bold uppercase tracking-[0.1em]">Email Address</label>
                 <Input data-testid="login-email-input" type="email" value={email}
                   onChange={(e) => { setEmail(e.target.value); setError(''); }}
                   placeholder="name@example.com"
-                  className="mt-1.5 bg-[#F0F4FA] border-[#E2E8F0] focus:bg-white focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-xl h-11" />
+                  className="mt-1.5 bg-[#F0F4FA] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#64748B] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-xl h-11" />
               </div>
               <div>
                 <div className="flex justify-between items-center">
-                  <label className="text-[#64748B] text-[11px] font-bold uppercase tracking-[0.1em]">Password</label>
+                  <label className="text-[#64748B] dark:text-[#94A3B8] text-[11px] font-bold uppercase tracking-[0.1em]">Password</label>
                   <button 
                     type="button"
                     onClick={handleForgotPassword}
@@ -121,8 +121,8 @@ export default function LoginPage() {
                   <Input data-testid="login-password-input" type={showPw ? 'text' : 'password'} value={password}
                     onChange={(e) => { setPassword(e.target.value); setError(''); }}
                     placeholder="Enter password"
-                    className="bg-[#F0F4FA] border-[#E2E8F0] focus:bg-white focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-xl h-11 pr-10" />
-                  <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#0F172A]">
+                    className="bg-[#F0F4FA] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#64748B] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-xl h-11 pr-10" />
+                  <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] dark:text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white">
                     {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
@@ -134,16 +134,16 @@ export default function LoginPage() {
             </form>
 
             <div className="relative my-5">
-              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#E2E8F0]" /></div>
-              <div className="relative flex justify-center text-[11px]"><span className="bg-white px-3 text-[#94A3B8] uppercase tracking-wider">Or continue with</span></div>
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#E2E8F0] dark:border-[#334155]" /></div>
+              <div className="relative flex justify-center text-[11px]"><span className="bg-white dark:bg-[#1E293B] px-3 text-[#94A3B8] uppercase tracking-wider">Or continue with</span></div>
             </div>
 
             <Button type="button" data-testid="login-google-btn" onClick={handleGoogle} disabled={googleLoading}
-              className="w-full bg-[#F0F4FA] border border-[#E2E8F0] text-[#0F172A] hover:bg-[#E2E8F0] rounded-full py-2.5 h-11 font-medium flex items-center justify-center gap-2.5">
+              className="w-full bg-[#F0F4FA] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#334155] text-[#0F172A] dark:text-[#F1F5F9] hover:bg-[#E2E8F0] dark:hover:bg-[#334155] rounded-full py-2.5 h-11 font-medium flex items-center justify-center gap-2.5">
               {googleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><GoogleIcon /> Continue with Google</>}
             </Button>
 
-            <p className="text-center text-[#64748B] text-[13px] mt-5">
+            <p className="text-center text-[#64748B] dark:text-[#94A3B8] text-[13px] mt-5">
               New to discuss? <Link to="/register" data-testid="login-to-register-link" className="text-[#CC0000] hover:underline font-semibold">Create account</Link>
             </p>
           </div>

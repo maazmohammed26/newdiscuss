@@ -31,13 +31,11 @@ export default function CommentsSection({ postId, currentUser }) {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    // Initial fetch
     getComments(postId).then(data => {
       setComments(data);
       setLoading(false);
     }).catch(() => setLoading(false));
 
-    // Real-time subscription
     const unsubscribe = subscribeToCommentsRealtime(postId, (updatedComments) => {
       setComments(updatedComments);
       setLoading(false);
@@ -52,7 +50,6 @@ export default function CommentsSection({ postId, currentUser }) {
     setSubmitting(true);
     try {
       await createComment(postId, newComment.trim(), currentUser);
-      // Don't add to state - real-time listener will pick it up
       setNewComment('');
     } catch (err) {
       toast.error(err.message || 'Failed to add comment');
@@ -77,19 +74,19 @@ export default function CommentsSection({ postId, currentUser }) {
   };
 
   return (
-    <div data-testid={`comments-section-${postId}`} className="border-t border-[#E2E8F0] bg-[#F8FAFC]/30">
+    <div data-testid={`comments-section-${postId}`} className="border-t border-[#E2E8F0] dark:border-[#334155] bg-[#F8FAFC]/30 dark:bg-[#0F172A]/30">
       <div className="p-4 space-y-3">
         {loading ? (
           <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-[#64748B]" /></div>
         ) : comments.length === 0 ? (
-          <p className="text-[#64748B] text-[13px] text-center py-3">No comments yet. Be the first!</p>
+          <p className="text-[#64748B] dark:text-[#94A3B8] text-[13px] text-center py-3">No comments yet. Be the first!</p>
         ) : (
           comments.map((c) => (
-            <div key={c.id} data-testid={`comment-${c.id}`} className="border-l-4 border-[#3B82F6] bg-white rounded-r-md pl-4 py-3 pr-3 shadow-sm">
+            <div key={c.id} data-testid={`comment-${c.id}`} className="border-l-4 border-[#3B82F6] bg-white dark:bg-[#1E293B] rounded-r-md pl-4 py-3 pr-3 shadow-sm dark:shadow-none">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span data-testid={`comment-author-${c.id}`} className="font-semibold text-[#0F172A] text-[13px]">{c.author_username}</span>
-                  <span className="text-[#64748B] text-xs">{timeAgo(c.timestamp)}</span>
+                  <span data-testid={`comment-author-${c.id}`} className="font-semibold text-[#0F172A] dark:text-[#F1F5F9] text-[13px]">{c.author_username}</span>
+                  <span className="text-[#64748B] dark:text-[#94A3B8] text-xs">{timeAgo(c.timestamp)}</span>
                 </div>
                 {currentUser?.id === c.author_id && (
                   <button data-testid={`comment-delete-btn-${c.id}`} onClick={() => setDeleteTarget(c.id)}
@@ -98,13 +95,13 @@ export default function CommentsSection({ postId, currentUser }) {
                   </button>
                 )}
               </div>
-              <p data-testid={`comment-text-${c.id}`} className="text-[#0F172A] text-[13px] md:text-[15px] mt-1 leading-relaxed">{c.text}</p>
+              <p data-testid={`comment-text-${c.id}`} className="text-[#0F172A] dark:text-[#E2E8F0] text-[13px] md:text-[15px] mt-1 leading-relaxed">{c.text}</p>
             </div>
           ))
         )}
         <form onSubmit={handleSubmit} className="flex gap-2 pt-1">
           <Input data-testid={`comment-input-${postId}`} value={newComment} onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Write a comment..." className="flex-1 bg-white border-[#E2E8F0] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-xl text-[13px]" />
+            placeholder="Write a comment..." className="flex-1 bg-white dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#64748B] focus:border-[#3B82F6] focus:ring-2 focus:ring-[#3B82F6]/20 rounded-xl text-[13px]" />
           <Button type="submit" data-testid={`comment-submit-${postId}`} disabled={submitting || !newComment.trim()}
             className="bg-[#3B82F6] text-white hover:bg-[#2563EB] rounded-xl px-3 shadow-sm shrink-0">
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
@@ -112,11 +109,11 @@ export default function CommentsSection({ postId, currentUser }) {
         </form>
       </div>
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Delete comment?</AlertDialogTitle>
-            <AlertDialogDescription>This will permanently delete your comment.</AlertDialogDescription></AlertDialogHeader>
+        <AlertDialogContent className="dark:bg-[#1E293B] dark:border-[#334155]">
+          <AlertDialogHeader><AlertDialogTitle className="dark:text-[#F1F5F9]">Delete comment?</AlertDialogTitle>
+            <AlertDialogDescription className="dark:text-[#94A3B8]">This will permanently delete your comment.</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel data-testid="comment-delete-cancel">Cancel</AlertDialogCancel>
+            <AlertDialogCancel data-testid="comment-delete-cancel" className="dark:bg-[#334155] dark:text-[#F1F5F9] dark:border-[#334155] dark:hover:bg-[#475569]">Cancel</AlertDialogCancel>
             <AlertDialogAction data-testid="comment-delete-confirm" onClick={handleDelete} disabled={deleting} className="bg-[#EF4444] text-white hover:bg-[#DC2626]">
               {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Delete'}
             </AlertDialogAction>
