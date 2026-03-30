@@ -99,16 +99,22 @@ export const createUser = async (userId, userData) => {
   const userRef = ref(database, `users/${userId}`);
   await set(userRef, {
     ...userData,
+    verified: false, // Default verified status
     created_at: new Date().toISOString()
   });
-  return { id: userId, ...userData };
+  return { id: userId, ...userData, verified: false };
 };
 
 export const getUser = async (userId) => {
   const userRef = ref(database, `users/${userId}`);
   const snapshot = await get(userRef);
   if (snapshot.exists()) {
-    return { id: userId, ...snapshot.val() };
+    const userData = snapshot.val();
+    return { 
+      id: userId, 
+      ...userData,
+      verified: userData.verified || false // Ensure verified field exists
+    };
   }
   return null;
 };
@@ -120,7 +126,11 @@ export const getUserByEmail = async (email) => {
     const users = snapshot.val();
     for (const [id, user] of Object.entries(users)) {
       if (user.email?.toLowerCase() === email.toLowerCase()) {
-        return { id, ...user };
+        return { 
+          id, 
+          ...user,
+          verified: user.verified || false // Ensure verified field exists
+        };
       }
     }
   }
@@ -178,6 +188,7 @@ export const createPost = async (postData, user) => {
     author_username: user.username || user.displayName || user.email?.split('@')[0],
     author_id: user.id || user.uid,
     author_photo: user.photo_url || user.photoURL || '',
+    author_verified: user.verified || false, // Include verified status
     timestamp: new Date().toISOString()
   };
   

@@ -8,6 +8,7 @@ import LinkifiedText from '@/components/LinkifiedText';
 import ExpandableText from '@/components/ExpandableText';
 import ExternalLinkModal from '@/components/ExternalLinkModal';
 import UserPreviewModal from '@/components/UserPreviewModal';
+import VerifiedBadge from '@/components/VerifiedBadge';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -114,9 +115,10 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
             <button
               data-testid={`post-author-${post.id}`}
               onClick={handleUsernameClick}
-              className="font-semibold text-[#2563EB] discuss:text-[#F5F5F5] discuss:hover:text-[#EF4444] hover:underline text-[13px] md:text-[15px] cursor-pointer transition-colors"
+              className="font-semibold text-[#1D7AFF] discuss:text-[#F5F5F5] discuss:hover:text-[#EF4444] hover:underline text-[13px] md:text-[15px] cursor-pointer transition-colors flex items-center gap-1"
             >
               {post.author_username}
+              {post.author_verified && <VerifiedBadge size="xs" />}
             </button>
             <span className="text-[#94A3B8] dark:text-[#64748B] discuss:text-[#9CA3AF] text-xs shrink-0">{timeAgo(post.timestamp)}</span>
           </div>

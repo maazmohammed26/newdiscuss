@@ -5,8 +5,10 @@ import { getPosts } from '@/lib/db';
 import Header from '@/components/Header';
 import PostCard from '@/components/PostCard';
 import ThemeSelector from '@/components/ThemeSelector';
+import VerifiedBadge from '@/components/VerifiedBadge';
+import VerificationRequestModal from '@/components/VerificationRequestModal';
 import { Button } from '@/components/ui/button';
-import { FileText, LogOut, Loader2, AlertTriangle, ChevronDown, ChevronUp, Calendar, Filter } from 'lucide-react';
+import { FileText, LogOut, Loader2, AlertTriangle, ChevronDown, ChevronUp, Calendar, Filter, ShieldCheck } from 'lucide-react';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
@@ -20,6 +22,7 @@ export default function ProfilePage() {
   const [filterType, setFilterType] = useState('all');
   const [filterMonth, setFilterMonth] = useState('');
   const [filterYear, setFilterYear] = useState('');
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
 
   useEffect(() => {
     if (user?.id) {
@@ -88,15 +91,29 @@ export default function ProfilePage() {
             </div>
           )}
 
-          <h1 data-testid="profile-username" className="font-heading text-xl font-bold text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5]">{user?.username}</h1>
+          <h1 data-testid="profile-username" className="font-heading text-xl font-bold text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] flex items-center justify-center gap-2">
+            {user?.username}
+            {user?.verified && <VerifiedBadge size="md" />}
+          </h1>
           <p data-testid="profile-email" className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-[13px] mt-0.5">{user?.email}</p>
 
           <div className="inline-flex items-center gap-2 bg-[#F5F5F7] dark:bg-[#0F172A] discuss:bg-[#1a1a1a] discuss:border discuss:border-[#333333] px-4 py-2 mt-4">
-            <FileText className="w-4 h-4 text-[#2563EB] discuss:text-[#EF4444]" />
+            <FileText className="w-4 h-4 text-[#1D7AFF] discuss:text-[#EF4444]" />
             <span data-testid="profile-post-count" className="text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] text-[13px] font-semibold">
               {loadingPosts ? <Loader2 className="w-3.5 h-3.5 animate-spin inline" /> : `${userPosts.length} Total Posts`}
             </span>
           </div>
+
+          {!user?.verified && (
+            <Button
+              onClick={() => setShowVerificationModal(true)}
+              variant="outline"
+              className="mt-4 border-[#E63946] text-[#E63946] hover:bg-[#E63946]/10 dark:border-[#E63946] dark:hover:bg-[#E63946]/10 discuss:border-[#EF4444] discuss:text-[#EF4444] discuss:hover:bg-[#EF4444]/10"
+            >
+              <ShieldCheck className="w-4 h-4 mr-2" />
+              Request Verification
+            </Button>
+          )}
 
           <div className="mt-6 pt-5 border-t border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">
             <div className="flex items-center justify-between mb-2">
@@ -226,6 +243,12 @@ export default function ProfilePage() {
           Managed by <span className="font-semibold text-[#BC4800]">&lt;discuss&gt;</span>
         </p>
       </div>
+
+      <VerificationRequestModal 
+        open={showVerificationModal} 
+        onClose={() => setShowVerificationModal(false)}
+        user={user}
+      />
     </div>
   );
 }
