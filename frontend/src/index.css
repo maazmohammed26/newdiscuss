@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -52,6 +54,38 @@
     --input: 217 33% 25%;
     --ring: 217 91% 53%;
   }
+
+  /* Discuss Theme - Retro Terminal Style */
+  .discuss {
+    --background: 0 0% 4%;
+    --foreground: 158 100% 65%;
+    --card: 0 0% 8%;
+    --card-foreground: 158 100% 65%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 158 100% 65%;
+    --primary: 158 100% 50%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 180 100% 50%;
+    --secondary-foreground: 0 0% 0%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 158 60% 50%;
+    --accent: 0 0% 12%;
+    --accent-foreground: 158 100% 65%;
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 158 100% 25%;
+    --input: 0 0% 12%;
+    --ring: 158 100% 50%;
+    --radius: 0rem;
+  }
+
+  .discuss * {
+    border-radius: 0 !important;
+  }
+  
+  .discuss body {
+    font-family: 'Roboto Mono', 'Courier New', monospace !important;
+  }
 }
 
 @layer base {
@@ -69,6 +103,10 @@
     body {
       font-size: 15px;
     }
+  }
+  
+  .discuss body {
+    font-family: 'Roboto Mono', 'Courier New', monospace;
   }
 }
 
@@ -101,5 +139,42 @@
     border-right-color: inherit;
     border-top-color: inherit;
     border-bottom-color: inherit;
+  }
+}
+
+
+/* Retro Button Effects for Discuss Theme */
+@layer components {
+  .discuss button:not(:disabled),
+  .discuss a > button:not(:disabled) {
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+    transition: all 0.1s ease;
+    border: 2px solid hsl(var(--primary));
+  }
+  
+  .discuss button:not(:disabled):hover,
+  .discuss a > button:not(:disabled):hover {
+    box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.7);
+    transform: translate(-1px, -1px);
+  }
+  
+  .discuss button:not(:disabled):active,
+  .discuss a > button:not(:disabled):active {
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+    transform: translate(2px, 2px);
+  }
+  
+  /* Input fields in discuss theme */
+  .discuss input,
+  .discuss textarea,
+  .discuss select {
+    box-shadow: inset 3px 3px 0 rgba(0, 0, 0, 0.3);
+    border: 2px solid hsl(var(--border));
+  }
+  
+  .discuss input:focus,
+  .discuss textarea:focus,
+  .discuss select:focus {
+    box-shadow: inset 3px 3px 0 rgba(0, 0, 0, 0.3), 0 0 0 2px hsl(var(--primary));
   }
 }

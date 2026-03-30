@@ -9,11 +9,16 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     const root = document.documentElement;
+    // Remove all theme classes
+    root.classList.remove('dark', 'discuss');
+    
+    // Add appropriate theme class
     if (theme === 'dark') {
       root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
+    } else if (theme === 'discuss') {
+      root.classList.add('discuss');
     }
+    
     localStorage.setItem('discuss_theme', theme);
   }, [theme]);
 
@@ -21,8 +26,12 @@ export function ThemeProvider({ children }) {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
   };
 
+  const changeTheme = (newTheme) => {
+    setTheme(newTheme);
+  };
+
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, changeTheme }}>
       {children}
     </ThemeContext.Provider>
   );

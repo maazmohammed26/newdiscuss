@@ -1,20 +1,19 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toggleVote, updatePost, deletePost } from '@/lib/db';
+import { toggleVote, deletePost } from '@/lib/db';
 import CommentsSection from '@/components/CommentsSection';
 import ShareModal from '@/components/ShareModal';
+import EditPostModal from '@/components/EditPostModal';
 import LinkifiedText from '@/components/LinkifiedText';
 import ExpandableText from '@/components/ExpandableText';
 import ExternalLinkModal from '@/components/ExternalLinkModal';
 import UserPreviewModal from '@/components/UserPreviewModal';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ThumbsUp, ThumbsDown, MessageSquare, Share2, Pencil, Trash2, Github, ExternalLink, X, Check, Loader2, Hash } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, MessageSquare, Share2, Pencil, Trash2, Github, ExternalLink, Loader2, Hash } from 'lucide-react';
 import { toast } from 'sonner';
 
 function timeAgo(iso) {
@@ -36,12 +35,7 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
   const navigate = useNavigate();
   const [showComments, setShowComments] = useState(false);
   const [showShare, setShowShare] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(post.title || '');
-  const [editContent, setEditContent] = useState(post.content);
-  const [editGithub, setEditGithub] = useState(post.github_link || '');
-  const [editPreview, setEditPreview] = useState(post.preview_link || '');
-  const [saving, setSaving] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [voting, setVoting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -89,22 +83,6 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
     }
   };
 
-  const handleSaveEdit = async () => {
-    setSaving(true);
-    try {
-      const payload = { content: editContent };
-      if (isProject) { payload.title = editTitle; payload.github_link = editGithub; payload.preview_link = editPreview; }
-      const data = await updatePost(post.id, payload, currentUser.id);
-      onUpdated(data); 
-      setEditing(false);
-      toast.success('Post updated');
-    } catch (err) {
-      toast.error(err.message || 'Failed to update post');
-    } finally { 
-      setSaving(false); 
-    }
-  };
-
   const handleDelete = async () => {
     setDeleting(true);
     try { 
@@ -120,7 +98,7 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
   };
 
   return (
-    <div data-testid={`post-card-${post.id}`} className="bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_4px_20px_rgba(0,0,0,0.2)] transition-all duration-200 overflow-hidden">
+    <div data-testid={`post-card-${post.id}`} className="bg-white dark:bg-[#1E293B] discuss:bg-[#141414] border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#00FF88] shadow-[0_2px_12px_rgba(0,0,0,0.04)] dark:shadow-none hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_4px_20px_rgba(0,0,0,0.2)] transition-all duration-200 overflow-hidden">
       {/* Content area */}
       <div className="p-4 md:p-5">
         {/* Header */}
@@ -128,26 +106,26 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
             <span data-testid={`post-badge-${post.id}`}
               className={isProject
-                ? 'bg-[#BC4800]/10 text-[#BC4800] border border-[#BC4800]/20 rounded-full px-2.5 py-0.5 text-xs font-semibold shrink-0'
-                : 'bg-[#2563EB]/10 text-[#2563EB] dark:text-[#60A5FA] border border-[#2563EB]/20 rounded-full px-2.5 py-0.5 text-xs font-semibold shrink-0'
+                ? 'bg-[#BC4800]/10 text-[#BC4800] discuss:bg-[#00FFFF]/10 discuss:text-[#00FFFF] border border-[#BC4800]/20 discuss:border-[#00FFFF] px-2.5 py-0.5 text-xs font-semibold shrink-0'
+                : 'bg-[#2563EB]/10 text-[#2563EB] discuss:bg-[#00FF88]/10 discuss:text-[#00FF88] dark:text-[#60A5FA] border border-[#2563EB]/20 discuss:border-[#00FF88] px-2.5 py-0.5 text-xs font-semibold shrink-0'
               }>
               {isProject ? 'Project' : 'Discussion'}
             </span>
             <button
               data-testid={`post-author-${post.id}`}
               onClick={handleUsernameClick}
-              className="font-semibold text-[#2563EB] hover:underline text-[13px] md:text-[15px] cursor-pointer"
+              className="font-semibold text-[#2563EB] discuss:text-[#00FF88] hover:underline text-[13px] md:text-[15px] cursor-pointer"
             >
               {post.author_username}
             </button>
-            <span className="text-[#94A3B8] dark:text-[#64748B] text-xs shrink-0">{timeAgo(post.timestamp)}</span>
+            <span className="text-[#94A3B8] dark:text-[#64748B] discuss:text-[#00FF88]/50 text-xs shrink-0">{timeAgo(post.timestamp)}</span>
           </div>
-          {isAuthor && !editing && (
+          {isAuthor && (
             <div className="flex items-center gap-0.5 shrink-0">
-              <button data-testid={`post-edit-btn-${post.id}`} onClick={(e) => { e.stopPropagation(); setEditing(true); }} className="p-1.5 rounded-lg hover:bg-[#F5F5F7] dark:hover:bg-[#334155] text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white transition-colors">
+              <button data-testid={`post-edit-btn-${post.id}`} onClick={(e) => { e.stopPropagation(); setShowEditModal(true); }} className="p-1.5 hover:bg-[#F5F5F7] dark:hover:bg-[#334155] discuss:hover:bg-[#00FF88]/10 text-[#94A3B8] discuss:text-[#00FF88] hover:text-[#0F172A] dark:hover:text-white transition-colors">
                 <Pencil className="w-3.5 h-3.5" />
               </button>
-              <button data-testid={`post-delete-btn-${post.id}`} onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }} className="p-1.5 rounded-lg hover:bg-[#EF4444]/10 text-[#94A3B8] hover:text-[#EF4444] transition-colors">
+              <button data-testid={`post-delete-btn-${post.id}`} onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }} className="p-1.5 hover:bg-[#EF4444]/10 text-[#94A3B8] discuss:text-[#00FF88] hover:text-[#EF4444] transition-colors">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -155,120 +133,98 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
         </div>
 
         {/* Body - clickable to open post detail */}
-        {editing ? (
-          <div className="space-y-3">
-            {isProject && <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Project title" className="bg-[#F5F5F7] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#2563EB] rounded-xl" />}
-            <Textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} placeholder="Content" rows={3} className="bg-[#F5F5F7] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#2563EB] rounded-xl resize-none" />
-            {isProject && (
-              <>
-                <Input value={editGithub} onChange={(e) => setEditGithub(e.target.value)} placeholder="GitHub link" className="bg-[#F5F5F7] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] rounded-xl" />
-                <Input value={editPreview} onChange={(e) => setEditPreview(e.target.value)} placeholder="Live preview link" className="bg-[#F5F5F7] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] rounded-xl" />
-              </>
-            )}
-            <div className="flex gap-2">
-              <Button data-testid={`post-save-edit-${post.id}`} onClick={handleSaveEdit} disabled={saving} className="bg-[#2563EB] text-white hover:bg-[#1D4ED8] rounded-full px-4 py-1.5 text-[13px] font-medium">
-                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Check className="w-3.5 h-3.5 mr-1" /> Save</>}
-              </Button>
-              <Button onClick={() => setEditing(false)} variant="ghost" className="hover:bg-[#F5F5F7] dark:hover:bg-[#334155] text-[#6275AF] dark:text-[#94A3B8] rounded-full px-4 py-1.5 text-[13px]">
-                <X className="w-3.5 h-3.5 mr-1" /> Cancel
-              </Button>
-            </div>
+        <div
+          data-testid={`post-clickable-${post.id}`}
+          onClick={handlePostClick}
+          className="cursor-pointer"
+        >
+          {isProject && post.title && (
+            <h3 data-testid={`post-title-${post.id}`} className="font-bold text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#00FF88] text-[15px] md:text-[17px] mb-1.5 leading-snug hover:text-[#2563EB] dark:hover:text-[#60A5FA] discuss:hover:text-[#00DD77] transition-colors">{post.title}</h3>
+          )}
+          <div data-testid={`post-content-${post.id}`} className="text-[#0F172A] dark:text-[#E2E8F0] discuss:text-[#00FF88]/90 text-[13px] md:text-[15px] leading-relaxed">
+            <ExpandableText text={post.content} maxLines={5}>
+              <span className="whitespace-pre-wrap"><LinkifiedText text={post.content} /></span>
+            </ExpandableText>
           </div>
-        ) : (
-          <div
-            data-testid={`post-clickable-${post.id}`}
-            onClick={handlePostClick}
-            className="cursor-pointer"
-          >
-            {isProject && post.title && (
-              <h3 data-testid={`post-title-${post.id}`} className="font-bold text-[#0F172A] dark:text-[#F1F5F9] text-[15px] md:text-[17px] mb-1.5 leading-snug hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors">{post.title}</h3>
-            )}
-            <div data-testid={`post-content-${post.id}`} className="text-[#0F172A] dark:text-[#E2E8F0] text-[13px] md:text-[15px] leading-relaxed">
-              <ExpandableText text={post.content} maxLines={5}>
-                <span className="whitespace-pre-wrap"><LinkifiedText text={post.content} /></span>
-              </ExpandableText>
+
+          {hashtags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-3" onClick={(e) => e.stopPropagation()}>
+              {hashtags.map((tag) => (
+                <button key={tag} data-testid={`post-hashtag-${tag}`} onClick={(e) => { e.stopPropagation(); onTagClick?.(tag); }}
+                  className="inline-flex items-center gap-0.5 bg-[#F5F5F7] dark:bg-[#0F172A] discuss:bg-[#00FF88]/10 hover:bg-[#2563EB]/10 discuss:hover:bg-[#00FF88]/20 px-2.5 py-1 text-xs font-medium text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#00FF88] hover:text-[#2563EB] discuss:hover:text-[#00DD77] transition-all">
+                  <Hash className="w-3 h-3" />{tag}
+                </button>
+              ))}
             </div>
+          )}
 
-            {hashtags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-3" onClick={(e) => e.stopPropagation()}>
-                {hashtags.map((tag) => (
-                  <button key={tag} data-testid={`post-hashtag-${tag}`} onClick={(e) => { e.stopPropagation(); onTagClick?.(tag); }}
-                    className="inline-flex items-center gap-0.5 bg-[#F5F5F7] dark:bg-[#0F172A] hover:bg-[#2563EB]/10 rounded-full px-2.5 py-1 text-xs font-medium text-[#6275AF] dark:text-[#94A3B8] hover:text-[#2563EB] transition-all">
-                    <Hash className="w-3 h-3" />{tag}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {isProject && (post.github_link || post.preview_link) && (
-              <div className="flex flex-wrap gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
-                {post.github_link && (
-                  <button onClick={(e) => handleExternalLink(post.github_link, e)} data-testid={`post-github-link-${post.id}`}
-                    className="inline-flex items-center gap-1.5 bg-[#0F172A] dark:bg-[#F1F5F9] text-white dark:text-[#0F172A] rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-[#1E293B] dark:hover:bg-[#E2E8F0] transition-colors">
-                    <Github className="w-3.5 h-3.5" /> GitHub
-                  </button>
-                )}
-                {post.preview_link && (
-                  <button onClick={(e) => handleExternalLink(post.preview_link, e)} data-testid={`post-preview-link-${post.id}`}
-                    className="inline-flex items-center gap-1.5 bg-[#2563EB] text-white rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-[#1D4ED8] transition-colors">
-                    <ExternalLink className="w-3.5 h-3.5" /> Live Preview
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+          {isProject && (post.github_link || post.preview_link) && (
+            <div className="flex flex-wrap gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+              {post.github_link && (
+                <button onClick={(e) => handleExternalLink(post.github_link, e)} data-testid={`post-github-link-${post.id}`}
+                  className="inline-flex items-center gap-1.5 bg-[#0F172A] dark:bg-[#F1F5F9] discuss:bg-[#00FF88] text-white dark:text-[#0F172A] discuss:text-[#0a0a0a] px-3 py-1.5 text-xs font-medium hover:bg-[#1E293B] dark:hover:bg-[#E2E8F0] discuss:hover:bg-[#00DD77] transition-colors">
+                  <Github className="w-3.5 h-3.5" /> GitHub
+                </button>
+              )}
+              {post.preview_link && (
+                <button onClick={(e) => handleExternalLink(post.preview_link, e)} data-testid={`post-preview-link-${post.id}`}
+                  className="inline-flex items-center gap-1.5 bg-[#2563EB] discuss:bg-[#00FFFF] text-white discuss:text-[#0a0a0a] px-3 py-1.5 text-xs font-medium hover:bg-[#1D4ED8] discuss:hover:bg-[#00DDDD] transition-colors">
+                  <ExternalLink className="w-3.5 h-3.5" /> Live Preview
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Actions bar */}
-      {!editing && (
-        <div className="flex items-center gap-2 px-3 py-2 border-t border-[#E2E8F0] dark:border-[#334155]">
-          <button 
-            data-testid={`post-upvote-btn-${post.id}`} 
-            onClick={() => handleVote('up')} 
-            disabled={voting}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all ${
-              userVote === 'up' 
-                ? 'bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/30' 
-                : 'text-[#6275AF] dark:text-[#94A3B8] hover:bg-[#10B981]/5 hover:text-[#10B981] border border-transparent'
-            }`}
-          >
-            <ThumbsUp className="w-4 h-4" fill={userVote === 'up' ? 'currentColor' : 'none'} />
-            <span data-testid={`post-upvote-count-${post.id}`}>{upvoteCount}</span>
-          </button>
+      <div className="flex items-center gap-2 px-3 py-2 border-t border-[#E2E8F0] dark:border-[#334155] discuss:border-[#00FF88]">
+        <button 
+          data-testid={`post-upvote-btn-${post.id}`} 
+          onClick={() => handleVote('up')} 
+          disabled={voting}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium transition-all ${
+            userVote === 'up' 
+              ? 'bg-[#10B981]/10 text-[#10B981] discuss:bg-[#00FF88]/20 discuss:text-[#00FF88] border border-[#10B981]/30 discuss:border-[#00FF88]' 
+              : 'text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#00FF88]/70 hover:bg-[#10B981]/5 hover:text-[#10B981] discuss:hover:bg-[#00FF88]/10 discuss:hover:text-[#00FF88] border border-transparent'
+          }`}
+        >
+          <ThumbsUp className="w-4 h-4" fill={userVote === 'up' ? 'currentColor' : 'none'} />
+          <span data-testid={`post-upvote-count-${post.id}`}>{upvoteCount}</span>
+        </button>
 
-          <button 
-            data-testid={`post-downvote-btn-${post.id}`} 
-            onClick={() => handleVote('down')} 
-            disabled={voting}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all ${
-              userVote === 'down' 
-                ? 'bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/30' 
-                : 'text-[#6275AF] dark:text-[#94A3B8] hover:bg-[#EF4444]/5 hover:text-[#EF4444] border border-transparent'
-            }`}
-          >
-            <ThumbsDown className="w-4 h-4" fill={userVote === 'down' ? 'currentColor' : 'none'} />
-            <span data-testid={`post-downvote-count-${post.id}`}>{downvoteCount}</span>
-          </button>
+        <button 
+          data-testid={`post-downvote-btn-${post.id}`} 
+          onClick={() => handleVote('down')} 
+          disabled={voting}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium transition-all ${
+            userVote === 'down' 
+              ? 'bg-[#EF4444]/10 text-[#EF4444] discuss:bg-[#FF0000]/20 discuss:text-[#FF0000] border border-[#EF4444]/30 discuss:border-[#FF0000]' 
+              : 'text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#00FF88]/70 hover:bg-[#EF4444]/5 hover:text-[#EF4444] discuss:hover:bg-[#FF0000]/10 discuss:hover:text-[#FF0000] border border-transparent'
+          }`}
+        >
+          <ThumbsDown className="w-4 h-4" fill={userVote === 'down' ? 'currentColor' : 'none'} />
+          <span data-testid={`post-downvote-count-${post.id}`}>{downvoteCount}</span>
+        </button>
 
-          <div className="w-px h-4 bg-[#E2E8F0] dark:bg-[#334155] mx-1" />
+        <div className="w-px h-4 bg-[#E2E8F0] dark:bg-[#334155] discuss:bg-[#00FF88]/30 mx-1" />
 
-          <button data-testid={`post-comments-btn-${post.id}`} onClick={() => setShowComments(!showComments)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] font-medium text-[#6275AF] dark:text-[#94A3B8] hover:bg-[#F5F5F7] dark:hover:bg-[#334155] hover:text-[#0F172A] dark:hover:text-white transition-colors">
-            <MessageSquare className="w-4 h-4" />
-            <span data-testid={`post-comment-count-${post.id}`}>{post.comment_count || 0}</span>
-          </button>
+        <button data-testid={`post-comments-btn-${post.id}`} onClick={() => setShowComments(!showComments)}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-medium text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#00FF88]/70 hover:bg-[#F5F5F7] dark:hover:bg-[#334155] discuss:hover:bg-[#00FF88]/10 hover:text-[#0F172A] dark:hover:text-white discuss:hover:text-[#00FF88] transition-colors">
+          <MessageSquare className="w-4 h-4" />
+          <span data-testid={`post-comment-count-${post.id}`}>{post.comment_count || 0}</span>
+        </button>
 
-          <button data-testid={`post-share-btn-${post.id}`} onClick={() => setShowShare(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] font-medium text-[#6275AF] dark:text-[#94A3B8] hover:bg-[#F5F5F7] dark:hover:bg-[#334155] hover:text-[#0F172A] dark:hover:text-white transition-colors">
-            <Share2 className="w-4 h-4" />
-            <span className="hidden sm:inline">Share</span>
-          </button>
-        </div>
-      )}
+        <button data-testid={`post-share-btn-${post.id}`} onClick={() => setShowShare(true)}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-medium text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#00FF88]/70 hover:bg-[#F5F5F7] dark:hover:bg-[#334155] discuss:hover:bg-[#00FF88]/10 hover:text-[#0F172A] dark:hover:text-white discuss:hover:text-[#00FF88] transition-colors">
+          <Share2 className="w-4 h-4" />
+          <span className="hidden sm:inline">Share</span>
+        </button>
+      </div>
 
       {showComments && <CommentsSection postId={post.id} postAuthorId={post.author_id} currentUser={currentUser} />}
       <ShareModal open={showShare} onClose={() => setShowShare(false)} post={post} />
+      <EditPostModal open={showEditModal} onClose={() => setShowEditModal(false)} post={post} currentUser={currentUser} onUpdated={onUpdated} />
 
       {externalLink && (
         <ExternalLinkModal open={true} onClose={() => setExternalLink(null)} url={externalLink.url} isHttp={externalLink.isHttp} />
@@ -279,12 +235,12 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
       )}
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent className="dark:bg-[#1E293B] dark:border-[#334155]">
-          <AlertDialogHeader><AlertDialogTitle className="dark:text-[#F1F5F9]">Delete post?</AlertDialogTitle>
-            <AlertDialogDescription className="dark:text-[#94A3B8]">This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+        <AlertDialogContent className="dark:bg-[#1E293B] dark:border-[#334155] discuss:bg-[#141414] discuss:border-[#00FF88]">
+          <AlertDialogHeader><AlertDialogTitle className="dark:text-[#F1F5F9] discuss:text-[#00FF88]">Delete post?</AlertDialogTitle>
+            <AlertDialogDescription className="dark:text-[#94A3B8] discuss:text-[#00FF88]/70">This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel data-testid={`post-delete-cancel-${post.id}`} className="dark:bg-[#334155] dark:text-[#F1F5F9] dark:border-[#334155] dark:hover:bg-[#475569]">Cancel</AlertDialogCancel>
-            <AlertDialogAction data-testid={`post-delete-confirm-${post.id}`} onClick={handleDelete} disabled={deleting} className="bg-[#EF4444] text-white hover:bg-[#DC2626]">
+            <AlertDialogCancel data-testid={`post-delete-cancel-${post.id}`} className="dark:bg-[#334155] dark:text-[#F1F5F9] dark:border-[#334155] dark:hover:bg-[#475569] discuss:bg-[#1E1E1E] discuss:text-[#00FF88] discuss:border-[#00FF88]/30">Cancel</AlertDialogCancel>
+            <AlertDialogAction data-testid={`post-delete-confirm-${post.id}`} onClick={handleDelete} disabled={deleting} className="bg-[#EF4444] text-white hover:bg-[#DC2626] discuss:bg-[#FF0000] discuss:hover:bg-[#DD0000]">
               {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>

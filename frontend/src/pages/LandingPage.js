@@ -8,12 +8,13 @@ import PWAInstallBanner from '@/components/PWAInstallBanner';
 import AdminMessageBanner from '@/components/AdminMessageBanner';
 import DiscussLogo from '@/components/DiscussLogo';
 import ThemeToggle from '@/components/ThemeToggle';
-import { ArrowRight, MessageSquare, FolderGit2, Zap, Linkedin, Users, Shield } from 'lucide-react';
+import { ArrowRight, MessageSquare, FolderGit2, Zap, Linkedin, Users, Shield, Terminal } from 'lucide-react';
 
 const features = [
   { icon: MessageSquare, title: 'Crafted for clarity.', desc: 'Designed to elevate the user experience through silence and space. Every element serves a purpose.' },
   { icon: FolderGit2, title: 'Project showcase.', desc: 'Share your work with GitHub links and live previews. Get real feedback from real developers.' },
   { icon: Zap, title: 'Real-time, always.', desc: 'Votes, comments, and posts update instantly across all connected users. No refresh needed.' },
+  { icon: Terminal, title: 'New: Discuss Theme!', desc: 'Experience our retro terminal-style theme with square edges, monospace fonts, and classic green-on-black aesthetics.', highlight: true },
 ];
 
 export default function LandingPage() {
@@ -70,16 +71,23 @@ export default function LandingPage() {
       </section>
 
       {/* Features */}
-      <section className="py-16 px-4 md:px-8 bg-white dark:bg-[#1E293B]">
+      <section className="py-16 px-4 md:px-8 bg-white dark:bg-[#1E293B] discuss:bg-[#141414]">
         <div className="max-w-5xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {features.map((f, i) => (
-              <div key={i} data-testid={`feature-card-${i}`} className="bg-[#F5F5F7] dark:bg-[#0F172A] rounded-2xl p-6 hover:shadow-md dark:hover:shadow-none transition-all group">
-                <div className="w-10 h-10 rounded-xl bg-white dark:bg-[#1E293B] flex items-center justify-center mb-4 shadow-sm">
-                  <f.icon className="w-5 h-5 text-[#2563EB]" />
+              <div key={i} data-testid={`feature-card-${i}`} className={`relative bg-[#F5F5F7] dark:bg-[#0F172A] discuss:bg-[#1E1E1E] discuss:border discuss:border-[#00FF88] p-6 hover:shadow-md dark:hover:shadow-none transition-all group ${
+                f.highlight ? 'md:col-span-2 ring-2 ring-[#BC4800] ring-offset-4 ring-offset-white dark:ring-offset-[#1E293B] discuss:ring-[#00FF88] discuss:ring-offset-[#141414]' : ''
+              }`}>
+                {f.highlight && (
+                  <span className="absolute -top-3 left-6 bg-[#BC4800] discuss:bg-[#00FF88] text-white discuss:text-[#0a0a0a] text-xs font-bold px-3 py-1 uppercase tracking-wide">
+                    ⚡ Just Launched
+                  </span>
+                )}
+                <div className={`w-10 h-10 bg-white dark:bg-[#1E293B] discuss:bg-[#0a0a0a] discuss:border discuss:border-[#00FF88] flex items-center justify-center mb-4 shadow-sm ${f.highlight ? '' : ''}`}>
+                  <f.icon className={`w-5 h-5 ${f.highlight ? 'text-[#BC4800] discuss:text-[#00FF88]' : 'text-[#2563EB] discuss:text-[#00FF88]'}`} />
                 </div>
-                <h3 className="text-[17px] font-bold text-[#0F172A] dark:text-[#F1F5F9] mb-2">{f.title}</h3>
-                <p className="text-[#6275AF] dark:text-[#94A3B8] text-[13px] md:text-[14px] leading-relaxed">{f.desc}</p>
+                <h3 className={`text-[17px] font-bold mb-2 ${f.highlight ? 'text-[#BC4800] dark:text-[#BC4800] discuss:text-[#00FF88]' : 'text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#00FF88]'}`}>{f.title}</h3>
+                <p className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#00FF88]/70 text-[13px] md:text-[14px] leading-relaxed">{f.desc}</p>
               </div>
             ))}
           </div>
