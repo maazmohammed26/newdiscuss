@@ -183,7 +183,7 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
             {isProject && post.title && (
               <h3 data-testid={`post-title-${post.id}`} className="font-bold text-[#0F172A] dark:text-[#F1F5F9] text-[15px] md:text-[17px] mb-1.5 leading-snug hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors">{post.title}</h3>
             )}
-            <div data-testid={`post-content-${post.id}`} className="text-[#0F172A] dark:text-[#E2E8F0] text-[13px] md:text-[15px] leading-relaxed" onClick={(e) => e.stopPropagation()}>
+            <div data-testid={`post-content-${post.id}`} className="text-[#0F172A] dark:text-[#E2E8F0] text-[13px] md:text-[15px] leading-relaxed">
               <ExpandableText text={post.content} maxLines={5}>
                 <span className="whitespace-pre-wrap"><LinkifiedText text={post.content} /></span>
               </ExpandableText>
