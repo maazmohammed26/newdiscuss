@@ -64,6 +64,7 @@ export function AuthProvider({ children }) {
         email: dbUser.email || firebaseUser.email,
         username: dbUser.username,
         photo_url: dbUser.photo_url || firebaseUser.photoURL || '',
+        verified: dbUser.verified || false, // Include verified status
         created_at: dbUser.created_at
       };
       
@@ -76,7 +77,8 @@ export function AuthProvider({ children }) {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
         username: firebaseUser.displayName || firebaseUser.email?.split('@')[0],
-        photo_url: firebaseUser.photoURL || ''
+        photo_url: firebaseUser.photoURL || '',
+        verified: false // Default to false on error
       };
       setUser(basicUser);
       return basicUser;
@@ -313,10 +315,16 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const refreshUser = async () => {
+    if (auth.currentUser) {
+      await syncUser(auth.currentUser);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, loading, pendingVerification, 
-      login, register, loginWithGoogle, logout, resendVerificationEmail 
+      login, register, loginWithGoogle, logout, resendVerificationEmail, refreshUser
     }}>
       {children}
     </AuthContext.Provider>
