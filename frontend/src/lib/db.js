@@ -416,6 +416,7 @@ export const createComment = async (postId, text, user) => {
     author_username: user.username || user.displayName || user.email?.split('@')[0],
     author_id: user.id || user.uid,
     author_photo: user.photo_url || user.photoURL || '',
+    author_verified: user.verified || false, // Include verified status
     timestamp: new Date().toISOString()
   };
   

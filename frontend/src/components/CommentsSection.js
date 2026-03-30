@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getComments, createComment, deleteComment, subscribeToCommentsRealtime } from '@/lib/db';
 import ExpandableText from '@/components/ExpandableText';
 import VerifiedBadge from '@/components/VerifiedBadge';
+import CommentUserInfoModal from '@/components/CommentUserInfoModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -31,6 +32,7 @@ export default function CommentsSection({ postId, postAuthorId, currentUser }) {
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [userInfoModal, setUserInfoModal] = useState(null); // Store userId for modal
 
   useEffect(() => {
     getComments(postId).then(data => {
@@ -85,6 +87,8 @@ export default function CommentsSection({ postId, postAuthorId, currentUser }) {
         ) : (
           comments.map((c) => {
             const isPostAuthor = c.author_id === postAuthorId;
+            const isClickable = !isPostAuthor; // Only clickable if NOT the post author
+            
             return (
               <div 
                 key={c.id} 
@@ -98,7 +102,19 @@ export default function CommentsSection({ postId, postAuthorId, currentUser }) {
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0 flex-wrap">
                     <div className="flex items-center gap-1">
-                      <span data-testid={`comment-author-${c.id}`} className="font-semibold text-[#0F172A] dark:text-[#F1F5F9] text-[13px]">{c.author_username}</span>
+                      {isClickable ? (
+                        <button
+                          onClick={() => setUserInfoModal(c.author_id)}
+                          data-testid={`comment-author-${c.id}`}
+                          className="font-semibold text-[#1D7AFF] discuss:text-[#60A5FA] hover:underline text-[13px] cursor-pointer transition-colors"
+                        >
+                          {c.author_username}
+                        </button>
+                      ) : (
+                        <span data-testid={`comment-author-${c.id}`} className="font-semibold text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] text-[13px]">
+                          {c.author_username}
+                        </span>
+                      )}
                       {c.author_verified && <VerifiedBadge size="xs" />}
                     </div>
                     {isPostAuthor && (
@@ -145,6 +161,15 @@ export default function CommentsSection({ postId, postAuthorId, currentUser }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* User Info Modal */}
+      {userInfoModal && (
+        <CommentUserInfoModal
+          open={!!userInfoModal}
+          onClose={() => setUserInfoModal(null)}
+          userId={userInfoModal}
+        />
+      )}
     </div>
   );
 }
