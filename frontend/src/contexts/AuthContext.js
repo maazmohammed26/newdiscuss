@@ -14,7 +14,7 @@ import {
   signInWithEmailLink
 } from '@/lib/firebase';
 import { database, ref, onValue, off } from '@/lib/firebase';
-import { createUser, getUser, getUserByEmail, checkUsernameAvailable, updateUser } from '@/lib/db';
+import { createUser, getUser, getUserByEmail, checkUsernameAvailable, updateUser, syncUserVerificationEverywhere } from '@/lib/db';
 
 const AuthContext = createContext(null);
 
@@ -159,14 +159,25 @@ export function AuthProvider({ children }) {
     if (!user?.id) return;
 
     const userRef = ref(database, `users/${user.id}`);
+    let previousVerified = user.verified; // Track previous value
     
     const handleUserUpdate = (snapshot) => {
       if (snapshot.exists()) {
         const userData = snapshot.val();
+        const newVerified = userData.verified || false;
+        
+        // Check if verified status changed
+        if (previousVerified !== newVerified) {
+          console.log(`Verification status changed: ${previousVerified} → ${newVerified}`);
+          // Sync verification status across all posts and comments
+          syncUserVerificationEverywhere(user.id, newVerified).catch(console.error);
+          previousVerified = newVerified;
+        }
+        
         // Update user state with new verified status and admin_message
         setUser(prev => ({
           ...prev,
-          verified: userData.verified || false,
+          verified: newVerified,
           admin_message: userData.admin_message || ''
         }));
       }
@@ -175,7 +186,7 @@ export function AuthProvider({ children }) {
     onValue(userRef, handleUserUpdate);
 
     return () => off(userRef, 'value', handleUserUpdate);
-  }, [user?.id]);
+  }, [user?.id, user?.verified]);
 
   const register = async (username, email, password) => {
     try {

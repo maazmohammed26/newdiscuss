@@ -565,3 +565,80 @@ export const subscribeToCommentsRealtime = (postId, callback) => {
   
   return () => off(commentsRef);
 };
+
+
+// ==================== SYNC VERIFICATION STATUS ====================
+
+/**
+ * Update author_verified field for all posts by a specific user
+ */
+export const syncUserVerificationInPosts = async (userId, verified) => {
+  try {
+    const postsRef = ref(database, 'posts');
+    const snapshot = await get(postsRef);
+    
+    if (!snapshot.exists()) return;
+    
+    const posts = snapshot.val();
+    const updates = {};
+    
+    // Find all posts by this user and update their author_verified field
+    Object.entries(posts).forEach(([postId, post]) => {
+      if (post.author_id === userId) {
+        updates[`posts/${postId}/author_verified`] = verified;
+      }
+    });
+    
+    // Apply all updates at once
+    if (Object.keys(updates).length > 0) {
+      await update(ref(database), updates);
+      console.log(`Updated ${Object.keys(updates).length} posts for user ${userId}`);
+    }
+  } catch (error) {
+    console.error('Error syncing verification in posts:', error);
+  }
+};
+
+/**
+ * Update author_verified field for all comments by a specific user
+ */
+export const syncUserVerificationInComments = async (userId, verified) => {
+  try {
+    const commentsRef = ref(database, 'comments');
+    const snapshot = await get(commentsRef);
+    
+    if (!snapshot.exists()) return;
+    
+    const allComments = snapshot.val();
+    const updates = {};
+    
+    // Find all comments by this user across all posts
+    Object.entries(allComments).forEach(([postId, comments]) => {
+      Object.entries(comments).forEach(([commentId, comment]) => {
+        if (comment.author_id === userId) {
+          updates[`comments/${postId}/${commentId}/author_verified`] = verified;
+        }
+      });
+    });
+    
+    // Apply all updates at once
+    if (Object.keys(updates).length > 0) {
+      await update(ref(database), updates);
+      console.log(`Updated ${Object.keys(updates).length} comments for user ${userId}`);
+    }
+  } catch (error) {
+    console.error('Error syncing verification in comments:', error);
+  }
+};
+
+/**
+ * Sync verification status across all user's posts and comments
+ */
+export const syncUserVerificationEverywhere = async (userId, verified) => {
+  console.log(`Syncing verification status (${verified}) for user ${userId}`);
+  await Promise.all([
+    syncUserVerificationInPosts(userId, verified),
+    syncUserVerificationInComments(userId, verified)
+  ]);
+  console.log('Verification sync complete');
+};
