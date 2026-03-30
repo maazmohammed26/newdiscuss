@@ -10,13 +10,15 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     const root = document.documentElement;
     // Remove all theme classes
-    root.classList.remove('dark', 'discuss');
+    root.classList.remove('dark', 'discuss-light', 'discuss-dark');
     
     // Add appropriate theme class
     if (theme === 'dark') {
       root.classList.add('dark');
-    } else if (theme === 'discuss') {
-      root.classList.add('discuss');
+    } else if (theme === 'discuss-light') {
+      root.classList.add('discuss-light');
+    } else if (theme === 'discuss-dark') {
+      root.classList.add('discuss-dark');
     }
     
     localStorage.setItem('discuss_theme', theme);
