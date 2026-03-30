@@ -55,27 +55,27 @@
     --ring: 217 91% 53%;
   }
 
-  /* Discuss Theme - Retro Terminal Style */
+  /* Discuss Theme - Tech Dark with Red Accents */
   .discuss {
-    --background: 0 0% 4%;
-    --foreground: 158 100% 65%;
-    --card: 0 0% 8%;
-    --card-foreground: 158 100% 65%;
-    --popover: 0 0% 8%;
-    --popover-foreground: 158 100% 65%;
-    --primary: 158 100% 50%;
-    --primary-foreground: 0 0% 0%;
-    --secondary: 180 100% 50%;
-    --secondary-foreground: 0 0% 0%;
-    --muted: 0 0% 12%;
-    --muted-foreground: 158 60% 50%;
-    --accent: 0 0% 12%;
-    --accent-foreground: 158 100% 65%;
-    --destructive: 0 100% 50%;
+    --background: 0 0% 7%;
+    --foreground: 0 0% 95%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 0 84% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 20%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 95%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 158 100% 25%;
-    --input: 0 0% 12%;
-    --ring: 158 100% 50%;
+    --border: 0 0% 20%;
+    --input: 0 0% 15%;
+    --ring: 0 84% 60%;
     --radius: 0rem;
   }
 
@@ -143,38 +143,23 @@
 }
 
 
-/* Retro Button Effects for Discuss Theme */
+/* Button Shadow Effects for Discuss Theme */
 @layer components {
   .discuss button:not(:disabled),
   .discuss a > button:not(:disabled) {
-    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
-    transition: all 0.1s ease;
-    border: 2px solid hsl(var(--primary));
+    box-shadow: 3px 3px 0 rgba(239, 68, 68, 0.3);
+    transition: all 0.15s ease;
   }
   
   .discuss button:not(:disabled):hover,
   .discuss a > button:not(:disabled):hover {
-    box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.7);
+    box-shadow: 5px 5px 0 rgba(239, 68, 68, 0.4);
     transform: translate(-1px, -1px);
   }
   
   .discuss button:not(:disabled):active,
   .discuss a > button:not(:disabled):active {
-    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+    box-shadow: 1px 1px 0 rgba(239, 68, 68, 0.3);
     transform: translate(2px, 2px);
-  }
-  
-  /* Input fields in discuss theme */
-  .discuss input,
-  .discuss textarea,
-  .discuss select {
-    box-shadow: inset 3px 3px 0 rgba(0, 0, 0, 0.3);
-    border: 2px solid hsl(var(--border));
-  }
-  
-  .discuss input:focus,
-  .discuss textarea:focus,
-  .discuss select:focus {
-    box-shadow: inset 3px 3px 0 rgba(0, 0, 0, 0.3), 0 0 0 2px hsl(var(--primary));
   }
 }
