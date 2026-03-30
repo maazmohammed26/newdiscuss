@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getComments, createComment, deleteComment, subscribeToCommentsRealtime } from '@/lib/db';
 import ExpandableText from '@/components/ExpandableText';
+import VerifiedBadge from '@/components/VerifiedBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -96,7 +97,10 @@ export default function CommentsSection({ postId, postAuthorId, currentUser }) {
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                    <span data-testid={`comment-author-${c.id}`} className="font-semibold text-[#0F172A] dark:text-[#F1F5F9] text-[13px]">{c.author_username}</span>
+                    <div className="flex items-center gap-1">
+                      <span data-testid={`comment-author-${c.id}`} className="font-semibold text-[#0F172A] dark:text-[#F1F5F9] text-[13px]">{c.author_username}</span>
+                      {c.author_verified && <VerifiedBadge size="xs" />}
+                    </div>
                     {isPostAuthor && (
                       <span data-testid={`comment-author-badge-${c.id}`} className="bg-[#BC4800]/15 text-[#BC4800] text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded">
                         Author

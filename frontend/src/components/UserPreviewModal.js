@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getUser, getPostsByUser } from '@/lib/db';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import VerifiedBadge from '@/components/VerifiedBadge';
 import { User, FileText, Calendar, ArrowRight, Loader2 } from 'lucide-react';
 
 export default function UserPreviewModal({ open, onClose, userId }) {
@@ -56,7 +57,10 @@ export default function UserPreviewModal({ open, onClose, userId }) {
                   <span className="text-white text-lg font-bold">{initials}</span>
                 </div>
               )}
-              <h3 data-testid="user-preview-name" className="font-bold text-[#0F172A] dark:text-[#F1F5F9] text-[16px]">{userData.username}</h3>
+              <h3 data-testid="user-preview-name" className="font-bold text-[#0F172A] dark:text-[#F1F5F9] text-[16px] flex items-center justify-center gap-1">
+                {userData.username}
+                {userData.verified && <VerifiedBadge size="xs" />}
+              </h3>
             </div>
 
             <div className="px-6 pb-6">

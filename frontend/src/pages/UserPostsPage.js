@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getUser, getPostsByUser } from '@/lib/db';
 import Header from '@/components/Header';
 import PostCard from '@/components/PostCard';
+import VerifiedBadge from '@/components/VerifiedBadge';
 import { ArrowLeft, User, FileText, Calendar, Loader2 } from 'lucide-react';
 
 export default function UserPostsPage() {
@@ -67,7 +68,10 @@ export default function UserPostsPage() {
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <h1 data-testid="user-posts-username" className="font-bold text-[#0F172A] dark:text-[#F1F5F9] text-[18px]">{userData.username}</h1>
+                  <h1 data-testid="user-posts-username" className="font-bold text-[#0F172A] dark:text-[#F1F5F9] text-[18px] flex items-center gap-1">
+                    {userData.username}
+                    {userData.verified && <VerifiedBadge size="sm" />}
+                  </h1>
                   <div className="flex items-center gap-4 mt-1">
                     <span className="flex items-center gap-1 text-[#6275AF] dark:text-[#94A3B8] text-[12px]">
                       <Calendar className="w-3.5 h-3.5" /> Joined {joinDate}
