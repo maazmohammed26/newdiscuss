@@ -12,6 +12,13 @@ import {
   query,
   orderByChild
 } from './firebase';
+import { 
+  secondaryDatabase, 
+  ref as secondaryRef, 
+  get as secondaryGet,
+  onValue as secondaryOnValue,
+  off as secondaryOff
+} from './firebaseSecondary';
 import { openDB } from 'idb';
 
 // IndexedDB for offline caching
@@ -211,22 +218,27 @@ export const getPostById = async (postId) => {
   const postRef = ref(database, `posts/${postId}`);
   const votesRef = ref(database, `votes/${postId}`);
   const commentsRef = ref(database, `comments/${postId}`);
+  const secondaryCommentsRef = secondaryRef(secondaryDatabase, `comments/${postId}`);
   
-  const [postSnap, votesSnap, commentsSnap] = await Promise.all([
-    get(postRef), get(votesRef), get(commentsRef)
+  const [postSnap, votesSnap, commentsSnap, secondaryCommentsSnap] = await Promise.all([
+    get(postRef), get(votesRef), get(commentsRef), secondaryGet(secondaryCommentsRef)
   ]);
   
   if (!postSnap.exists()) return null;
   
   const postVotes = votesSnap.exists() ? votesSnap.val() : {};
-  const postComments = commentsSnap.exists() ? commentsSnap.val() : {};
+  const oldComments = commentsSnap.exists() ? commentsSnap.val() : {};
+  const newComments = secondaryCommentsSnap.exists() ? secondaryCommentsSnap.val() : {};
+  
+  // Count comments from both databases
+  const totalCommentCount = Object.keys(oldComments).length + Object.keys(newComments).length;
   
   return {
     id: postId,
     ...postSnap.val(),
     upvote_count: Object.values(postVotes).filter(v => v === 'up').length,
     downvote_count: Object.values(postVotes).filter(v => v === 'down').length,
-    comment_count: Object.keys(postComments).length,
+    comment_count: totalCommentCount,
     votes: postVotes
   };
 };
@@ -235,25 +247,29 @@ export const getPostsByUser = async (userId) => {
   const postsRef = ref(database, 'posts');
   const votesRef = ref(database, 'votes');
   const commentsRef = ref(database, 'comments');
+  const secondaryCommentsRef = secondaryRef(secondaryDatabase, 'comments');
   
-  const [postsSnap, votesSnap, commentsSnap] = await Promise.all([
-    get(postsRef), get(votesRef), get(commentsRef)
+  const [postsSnap, votesSnap, commentsSnap, secondaryCommentsSnap] = await Promise.all([
+    get(postsRef), get(votesRef), get(commentsRef), secondaryGet(secondaryCommentsRef)
   ]);
   
   const posts = postsSnap.exists() ? postsSnap.val() : {};
   const votes = votesSnap.exists() ? votesSnap.val() : {};
   const comments = commentsSnap.exists() ? commentsSnap.val() : {};
+  const secondaryComments = secondaryCommentsSnap.exists() ? secondaryCommentsSnap.val() : {};
   
   return Object.entries(posts)
     .filter(([, p]) => p.author_id === userId)
     .map(([id, post]) => {
       const pv = votes[id] || {};
-      const pc = comments[id] || {};
+      const oldComments = comments[id] || {};
+      const newComments = secondaryComments[id] || {};
+      const totalCommentCount = Object.keys(oldComments).length + Object.keys(newComments).length;
       return {
         id, ...post,
         upvote_count: Object.values(pv).filter(v => v === 'up').length,
         downvote_count: Object.values(pv).filter(v => v === 'down').length,
-        comment_count: Object.keys(pc).length,
+        comment_count: totalCommentCount,
         votes: pv
       };
     })
@@ -268,29 +284,36 @@ export const getPosts = async (searchQuery = null) => {
   const postsRef = ref(database, 'posts');
   const votesRef = ref(database, 'votes');
   const commentsRef = ref(database, 'comments');
+  const secondaryCommentsRef = secondaryRef(secondaryDatabase, 'comments');
   
-  const [postsSnap, votesSnap, commentsSnap] = await Promise.all([
+  const [postsSnap, votesSnap, commentsSnap, secondaryCommentsSnap] = await Promise.all([
     get(postsRef),
     get(votesRef),
-    get(commentsRef)
+    get(commentsRef),
+    secondaryGet(secondaryCommentsRef)
   ]);
   
   const posts = postsSnap.exists() ? postsSnap.val() : {};
   const votes = votesSnap.exists() ? votesSnap.val() : {};
   const comments = commentsSnap.exists() ? commentsSnap.val() : {};
+  const secondaryComments = secondaryCommentsSnap.exists() ? secondaryCommentsSnap.val() : {};
   
   let postsList = Object.entries(posts).map(([id, post]) => {
     const postVotes = votes[id] || {};
-    const postComments = comments[id] || {};
+    const oldComments = comments[id] || {};
+    const newComments = secondaryComments[id] || {};
     const upvotes = Object.values(postVotes).filter(v => v === 'up').length;
     const downvotes = Object.values(postVotes).filter(v => v === 'down').length;
+    
+    // Count comments from both databases
+    const totalCommentCount = Object.keys(oldComments).length + Object.keys(newComments).length;
     
     return {
       id,
       ...post,
       upvote_count: upvotes,
       downvote_count: downvotes,
-      comment_count: Object.keys(postComments).length,
+      comment_count: totalCommentCount,
       votes: postVotes
     };
   });
@@ -528,6 +551,7 @@ export const subscribeToPostsRealtime = (callback) => {
   const postsRef = ref(database, 'posts');
   const votesRef = ref(database, 'votes');
   const commentsRef = ref(database, 'comments');
+  const secondCommentsRef = secondaryRef(secondaryDatabase, 'comments');
   
   const updatePosts = async () => {
     const posts = await getPosts();
@@ -538,11 +562,15 @@ export const subscribeToPostsRealtime = (callback) => {
   onValue(votesRef, updatePosts);
   onValue(commentsRef, updatePosts);
   
+  // Also listen to secondary database comments for real-time count updates
+  secondaryOnValue(secondCommentsRef, updatePosts);
+  
   // Return unsubscribe function
   return () => {
     off(postsRef);
     off(votesRef);
     off(commentsRef);
+    secondaryOff(secondCommentsRef);
   };
 };
 
