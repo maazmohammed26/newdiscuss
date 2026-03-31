@@ -6,6 +6,7 @@ import { getUserProfile } from '@/lib/userProfileDb';
 import Header from '@/components/Header';
 import PostCard from '@/components/PostCard';
 import VerifiedBadge from '@/components/VerifiedBadge';
+import ImagePreviewModal from '@/components/ImagePreviewModal';
 import { ArrowLeft, User, FileText, Calendar, Loader2, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function UserPostsPage() {
@@ -18,6 +19,7 @@ export default function UserPostsPage() {
   const [loading, setLoading] = useState(true);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [bioExpanded, setBioExpanded] = useState(false);
+  const [showImagePreview, setShowImagePreview] = useState(false);
 
   // Max characters before truncation
   const BIO_TRUNCATE_LENGTH = 150;
@@ -82,10 +84,21 @@ export default function UserPostsPage() {
             {/* User header card */}
             <div className="bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333] rounded-2xl p-5 mb-6">
               <div className="flex items-start gap-4">
+                {/* Profile Picture - Clickable if exists */}
                 {userData.photo_url ? (
-                  <img src={userData.photo_url} alt={userData.username} className="w-14 h-14 rounded-full object-cover shadow-md discuss:shadow-none discuss:border discuss:border-[#333333]" />
+                  <button 
+                    onClick={() => setShowImagePreview(true)}
+                    className="relative group shrink-0"
+                  >
+                    <img src={userData.photo_url} alt={userData.username} className="w-14 h-14 rounded-full object-cover shadow-md discuss:shadow-none discuss:border discuss:border-[#333333] group-hover:opacity-90 transition-opacity" />
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                      <div className="bg-black/50 rounded-full p-1.5">
+                        <User className="w-3.5 h-3.5 text-white" />
+                      </div>
+                    </div>
+                  </button>
                 ) : (
-                  <div className="w-14 h-14 rounded-full bg-[#2563EB] discuss:bg-[#EF4444] flex items-center justify-center shadow-md shadow-[#2563EB]/20 discuss:shadow-none discuss:border discuss:border-[#333333]">
+                  <div className="w-14 h-14 rounded-full bg-[#2563EB] discuss:bg-[#EF4444] flex items-center justify-center shadow-md shadow-[#2563EB]/20 discuss:shadow-none discuss:border discuss:border-[#333333] shrink-0">
                     <span className="text-white text-lg font-bold">{initials}</span>
                   </div>
                 )}
@@ -186,6 +199,14 @@ export default function UserPostsPage() {
           </>
         )}
       </div>
+
+      {/* Image Preview Modal */}
+      <ImagePreviewModal 
+        open={showImagePreview}
+        onClose={() => setShowImagePreview(false)}
+        imageUrl={userData?.photo_url}
+        altText={userData?.username}
+      />
     </div>
   );
 }

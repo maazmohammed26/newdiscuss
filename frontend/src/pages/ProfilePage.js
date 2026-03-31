@@ -11,7 +11,8 @@ import {
   addSocialLink,
   editSocialLink,
   deleteSocialLink,
-  BIO_CHAR_LIMIT 
+  BIO_CHAR_LIMIT,
+  MAX_SOCIAL_LINKS
 } from '@/lib/userProfileDb';
 import Header from '@/components/Header';
 import PostCard from '@/components/PostCard';
@@ -19,6 +20,7 @@ import ThemeSelector from '@/components/ThemeSelector';
 import VerifiedBadge from '@/components/VerifiedBadge';
 import VerificationRequestModal from '@/components/VerificationRequestModal';
 import UserAdminMessage from '@/components/UserAdminMessage';
+import ImagePreviewModal from '@/components/ImagePreviewModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -26,9 +28,13 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from '@/components/ui/popover';
 import { 
-  FileText, LogOut, Loader2, AlertTriangle, ChevronDown, ChevronUp, 
-  Calendar, Filter, ShieldCheck, User, Pencil, Trash2, Plus, Link2, X, Check, ExternalLink 
+  FileText, LogOut, Loader2, ChevronDown, ChevronUp, 
+  Calendar, Filter, ShieldCheck, User, Pencil, Trash2, Plus, Link2, X, Check, ExternalLink,
+  Info, Mail, Image as ImageIcon
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -45,6 +51,7 @@ export default function ProfilePage() {
   const [filterMonth, setFilterMonth] = useState('');
   const [filterYear, setFilterYear] = useState('');
   const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [showImagePreview, setShowImagePreview] = useState(false);
 
   // Profile data from secondary Firebase
   const [profileData, setProfileData] = useState(null);
@@ -69,6 +76,9 @@ export default function ProfilePage() {
   const [editLinkName, setEditLinkName] = useState('');
   const [editLinkUrl, setEditLinkUrl] = useState('');
   const [deleteLinkConfirm, setDeleteLinkConfirm] = useState(null);
+
+  // Check if max links reached
+  const maxLinksReached = (profileData?.socialLinks?.length || 0) >= MAX_SOCIAL_LINKS;
 
   // Fetch user posts
   useEffect(() => {
@@ -198,6 +208,10 @@ export default function ProfilePage() {
   // Social Link handlers
   const handleAddLink = async () => {
     if (!newLinkName.trim() || !newLinkUrl.trim()) return;
+    if (maxLinksReached) {
+      toast.error(`Maximum ${MAX_SOCIAL_LINKS} links allowed`);
+      return;
+    }
     setSavingLink(true);
     try {
       await addSocialLink(user.id, { name: newLinkName, url: newLinkUrl });
@@ -256,11 +270,59 @@ export default function ProfilePage() {
       <Header />
       <div className="max-w-xl mx-auto px-4 py-10">
         {/* Profile Card */}
-        <div className="bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] shadow-[0_4px_24px_rgba(0,0,0,0.06)] dark:shadow-none discuss:shadow-none border discuss:border discuss:border-[#333333] p-8 text-center">
+        <div className="bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] shadow-[0_4px_24px_rgba(0,0,0,0.06)] dark:shadow-none discuss:shadow-none border discuss:border discuss:border-[#333333] p-8 text-center relative">
+          
+          {/* Info Icon - Top Right */}
+          <div className="absolute top-4 right-4">
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="p-2 rounded-full hover:bg-[#F5F5F7] dark:hover:bg-[#0F172A] discuss:hover:bg-[#262626] text-[#6275AF] hover:text-[#2563EB] discuss:hover:text-[#EF4444] transition-colors">
+                  <Info className="w-5 h-5" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-4 bg-white dark:bg-[#1E293B] discuss:bg-[#262626] border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]" align="end">
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] text-sm">Profile Settings</h4>
+                  
+                  <div className="flex items-start gap-2 text-[12px] text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF]">
+                    <ImageIcon className="w-4 h-4 mt-0.5 shrink-0" />
+                    <p>Profile image can only be changed through your Google account. Sign in with Google to update your profile picture.</p>
+                  </div>
+                  
+                  <div className="flex items-start gap-2 text-[12px] text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF]">
+                    <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0" />
+                    <p>Password change is currently disabled for security reasons.</p>
+                  </div>
+                  
+                  <div className="pt-2 border-t border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">
+                    <a
+                      href="mailto:support@discussit.in"
+                      className="flex items-center justify-center gap-2 w-full bg-[#2563EB] discuss:bg-[#EF4444] hover:bg-[#1D4ED8] discuss:hover:bg-[#DC2626] text-white text-[12px] font-medium py-2 px-3 rounded-lg transition-colors"
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                      Contact Support
+                    </a>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Profile Picture - Clickable if exists */}
           {user?.photo_url ? (
-            <img src={user.photo_url} alt={user.username} className="w-24 h-24 mx-auto mb-5 shadow-lg discuss:shadow-none object-cover discuss:border discuss:border-[#333333]" />
+            <button 
+              onClick={() => setShowImagePreview(true)}
+              className="relative group mx-auto mb-5 block"
+            >
+              <img src={user.photo_url} alt={user.username} className="w-24 h-24 mx-auto shadow-lg discuss:shadow-none object-cover discuss:border discuss:border-[#333333] rounded-full group-hover:opacity-90 transition-opacity" />
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="bg-black/50 rounded-full p-2">
+                  <ImageIcon className="w-5 h-5 text-white" />
+                </div>
+              </div>
+            </button>
           ) : (
-            <div className="w-24 h-24 bg-[#2563EB] discuss:bg-[#EF4444] flex items-center justify-center mx-auto mb-5 shadow-lg shadow-[#2563EB]/20 discuss:shadow-none discuss:border discuss:border-[#333333]">
+            <div className="w-24 h-24 bg-[#2563EB] discuss:bg-[#EF4444] flex items-center justify-center mx-auto mb-5 shadow-lg shadow-[#2563EB]/20 discuss:shadow-none discuss:border discuss:border-[#333333] rounded-full">
               <span className="text-white discuss:text-white text-2xl font-bold">{initials}</span>
             </div>
           )}
@@ -271,7 +333,7 @@ export default function ProfilePage() {
           </h1>
           <p data-testid="profile-email" className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-[13px] mt-0.5">{user?.email}</p>
 
-          <div className="inline-flex items-center gap-2 bg-[#F5F5F7] dark:bg-[#0F172A] discuss:bg-[#1a1a1a] discuss:border discuss:border-[#333333] px-4 py-2 mt-4">
+          <div className="inline-flex items-center gap-2 bg-[#F5F5F7] dark:bg-[#0F172A] discuss:bg-[#1a1a1a] discuss:border discuss:border-[#333333] px-4 py-2 mt-4 rounded-lg">
             <FileText className="w-4 h-4 text-[#1D7AFF] discuss:text-[#EF4444]" />
             <span data-testid="profile-post-count" className="text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] text-[13px] font-semibold">
               {loadingPosts ? <Loader2 className="w-3.5 h-3.5 animate-spin inline" /> : `${userPosts.length} Total Posts`}
@@ -289,15 +351,15 @@ export default function ProfilePage() {
             </Button>
           )}
 
-          {/* User Admin Message - Above Theme Selector */}
+          {/* User Admin Message */}
           {user?.admin_message && (
             <div className="mt-6">
               <UserAdminMessage message={user.admin_message} />
             </div>
           )}
 
-          {/* ==================== NEW PROFILE FIELDS ==================== */}
-          <div className="mt-6 pt-5 border-t border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333] text-left space-y-5">
+          {/* ==================== PROFILE FIELDS ==================== */}
+          <div className="mt-6 pt-5 border-t border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333] text-left space-y-4">
             
             {/* Loading indicator for profile data */}
             {loadingProfile && (
@@ -362,7 +424,7 @@ export default function ProfilePage() {
                 <label className="text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] text-sm font-medium flex items-center gap-2">
                   <FileText className="w-4 h-4 text-[#2563EB] discuss:text-[#EF4444]" />
                   Bio
-                  <span className="text-[#6275AF] dark:text-[#94A3B8] text-xs font-normal">(optional, max {BIO_CHAR_LIMIT} chars)</span>
+                  <span className="text-[#6275AF] dark:text-[#94A3B8] text-xs font-normal">(max {BIO_CHAR_LIMIT} chars)</span>
                 </label>
                 {!editingBio && profileData?.bio && (
                   <div className="flex items-center gap-1">
@@ -419,8 +481,11 @@ export default function ProfilePage() {
                 <label className="text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] text-sm font-medium flex items-center gap-2">
                   <Link2 className="w-4 h-4 text-[#2563EB] discuss:text-[#EF4444]" />
                   Social Links
-                  <span className="text-[#6275AF] dark:text-[#94A3B8] text-xs font-normal">(optional)</span>
+                  <span className="text-[#6275AF] dark:text-[#94A3B8] text-xs font-normal">(max {MAX_SOCIAL_LINKS})</span>
                 </label>
+                <span className="text-[#6275AF] dark:text-[#94A3B8] text-xs">
+                  {profileData?.socialLinks?.length || 0}/{MAX_SOCIAL_LINKS}
+                </span>
               </div>
 
               {/* Existing Links */}
@@ -497,26 +562,23 @@ export default function ProfilePage() {
                     </Button>
                   </div>
                 </div>
-              ) : (
+              ) : !maxLinksReached ? (
                 <button onClick={() => setAddingLink(true)}
                   className="text-[#2563EB] discuss:text-[#EF4444] hover:underline text-sm flex items-center gap-1">
                   <Plus className="w-3.5 h-3.5" /> Add social link
                 </button>
+              ) : (
+                <p className="text-[#6275AF] dark:text-[#94A3B8] text-xs">Maximum links reached</p>
               )}
             </div>
           </div>
-          {/* ==================== END NEW PROFILE FIELDS ==================== */}
+          {/* ==================== END PROFILE FIELDS ==================== */}
 
           <div className="mt-6 pt-5 border-t border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] text-sm font-medium">Theme</span>
             </div>
             <ThemeSelector />
-          </div>
-
-          <div className="bg-[#FEF3C7] dark:bg-[#78350F]/20 discuss:bg-[#7C2D12]/20 discuss:border discuss:border-[#7C2D12] p-3 mt-5 flex items-center gap-2.5">
-            <AlertTriangle className="w-4 h-4 text-[#D97706] discuss:text-[#F97316] shrink-0" />
-            <p data-testid="profile-password-notice" className="text-[#92400E] dark:text-[#FDE68A] discuss:text-[#FED7AA] text-[13px] text-left">Password change is not possible for now.</p>
           </div>
 
           <Button data-testid="profile-logout-btn" onClick={handleLogout} disabled={loggingOut}
@@ -530,10 +592,10 @@ export default function ProfilePage() {
           <button
             data-testid="your-posts-toggle"
             onClick={() => setShowPosts(!showPosts)}
-            className="w-full flex items-center justify-between bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333] px-5 py-4 hover:shadow-md dark:hover:shadow-none transition-all"
+            className="w-full flex items-center justify-between bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333] px-5 py-4 hover:shadow-md dark:hover:shadow-none transition-all rounded-xl"
           >
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-[#2563EB]/10 discuss:bg-[#EF4444]/10 flex items-center justify-center">
+              <div className="w-9 h-9 bg-[#2563EB]/10 discuss:bg-[#EF4444]/10 flex items-center justify-center rounded-lg">
                 <FileText className="w-4 h-4 text-[#2563EB] discuss:text-[#EF4444]" />
               </div>
               <div className="text-left">
@@ -640,6 +702,14 @@ export default function ProfilePage() {
         open={showVerificationModal} 
         onClose={() => setShowVerificationModal(false)}
         user={user}
+      />
+
+      {/* Image Preview Modal */}
+      <ImagePreviewModal 
+        open={showImagePreview}
+        onClose={() => setShowImagePreview(false)}
+        imageUrl={user?.photo_url}
+        altText={user?.username}
       />
 
       {/* Delete Full Name Confirmation */}

@@ -12,7 +12,10 @@ import {
 } from './firebaseSecondary';
 
 // Character limit for bio
-export const BIO_CHAR_LIMIT = 500;
+export const BIO_CHAR_LIMIT = 250;
+
+// Max social links allowed
+export const MAX_SOCIAL_LINKS = 5;
 
 /**
  * Get user profile from Realtime Database
@@ -128,12 +131,13 @@ export const deleteBio = async (userId) => {
 /**
  * Update social links
  * @param {string} userId - Firebase Auth UID
- * @param {Array<{name: string, url: string}>} socialLinks - Array of social links
+ * @param {Array<{name: string, url: string}>} socialLinks - Array of social links (max 5)
  */
 export const updateSocialLinks = async (userId, socialLinks) => {
-  // Validate and clean social links
+  // Validate and clean social links (max 5)
   const cleanedLinks = socialLinks
     .filter(link => link.name && link.url)
+    .slice(0, MAX_SOCIAL_LINKS)
     .map(link => ({
       name: link.name.trim(),
       url: link.url.trim()
