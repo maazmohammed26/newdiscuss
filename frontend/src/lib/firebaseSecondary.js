@@ -18,16 +18,16 @@ import {
   equalTo
 } from 'firebase/database';
 
-// Secondary Firebase configuration (discussit-e8c1d)
+// Secondary Firebase configuration (discussit-5879b) - NEW
 const secondaryFirebaseConfig = {
-  apiKey: "AIzaSyDcUhVAum1uKqTbcsf8-7FF_IYe5vXI7DA",
-  authDomain: "discussit-e8c1d.firebaseapp.com",
-  databaseURL: "https://discussit-e8c1d-default-rtdb.firebaseio.com",
-  projectId: "discussit-e8c1d",
-  storageBucket: "discussit-e8c1d.firebasestorage.app",
-  messagingSenderId: "745091797576",
-  appId: "1:745091797576:web:97a9db1b0f33171899be7d",
-  measurementId: "G-FF1ZTVZK8R"
+  apiKey: "AIzaSyBPVZQ7HLr9-t4EZJVA_yD8L-rrhdIIMS0",
+  authDomain: "discussit-5879b.firebaseapp.com",
+  databaseURL: "https://discussit-5879b-default-rtdb.firebaseio.com",
+  projectId: "discussit-5879b",
+  storageBucket: "discussit-5879b.firebasestorage.app",
+  messagingSenderId: "1039827441866",
+  appId: "1:1039827441866:web:c1c89d9950920405203c33",
+  measurementId: "G-901N14JGG5"
 };
 
 // Initialize secondary app with unique name
