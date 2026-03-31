@@ -36,7 +36,7 @@ export const getUserProfile = async (userId) => {
     }
     return null;
   } catch (error) {
-    console.error('Error getting user profile:', error);
+    console.warn('Error getting user profile (secondary DB may not be configured):', error.message);
     return null;
   }
 };

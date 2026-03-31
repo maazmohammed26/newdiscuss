@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { getComments, subscribeToCommentsRealtime } from '@/lib/db';
 import { 
   createCommentFirestore, 
@@ -9,14 +9,18 @@ import {
 import ExpandableText from '@/components/ExpandableText';
 import VerifiedBadge from '@/components/VerifiedBadge';
 import CommentUserInfoModal from '@/components/CommentUserInfoModal';
+import LinkifiedText from '@/components/LinkifiedText';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Send, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+
+// Comment character limit
+const COMMENT_CHAR_LIMIT = 500;
 
 function timeAgo(iso) {
   if (!iso) return '';
@@ -33,7 +37,7 @@ function timeAgo(iso) {
 
 export default function CommentsSection({ postId, postAuthorId, currentUser }) {
   const [oldComments, setOldComments] = useState([]); // From Realtime DB (primary Firebase)
-  const [newComments, setNewComments] = useState([]); // From Firestore (secondary Firebase)
+  const [newComments, setNewComments] = useState([]); // From Realtime DB (secondary Firebase)
   const [newComment, setNewComment] = useState('');
   const [loadingOld, setLoadingOld] = useState(true);
   const [loadingNew, setLoadingNew] = useState(true);
@@ -48,6 +52,8 @@ export default function CommentsSection({ postId, postAuthorId, currentUser }) {
   );
 
   const loading = loadingOld || loadingNew;
+  const charCount = newComment.length;
+  const isOverLimit = charCount > COMMENT_CHAR_LIMIT;
 
   // Fetch old comments from Realtime Database (primary Firebase)
   useEffect(() => {
@@ -64,7 +70,7 @@ export default function CommentsSection({ postId, postAuthorId, currentUser }) {
     return () => unsubscribe();
   }, [postId]);
 
-  // Fetch new comments from Firestore (secondary Firebase)
+  // Fetch new comments from Realtime Database (secondary Firebase)
   useEffect(() => {
     getCommentsFirestore(postId).then(data => {
       setNewComments(data.map(c => ({ ...c, source: 'firestore' })));
@@ -82,7 +88,7 @@ export default function CommentsSection({ postId, postAuthorId, currentUser }) {
   // Submit new comment to secondary Realtime Database
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || isOverLimit) return;
     setSubmitting(true);
     try {
       await createCommentFirestore(postId, newComment.trim(), currentUser);
@@ -182,22 +188,46 @@ export default function CommentsSection({ postId, postAuthorId, currentUser }) {
                 </div>
                 <div data-testid={`comment-text-${c.id}`} className="text-[#0F172A] dark:text-[#E2E8F0] discuss:text-[#E5E7EB] text-[13px] md:text-[15px] mt-1 leading-relaxed">
                   <ExpandableText text={c.text} maxLines={4}>
-                    <span className="whitespace-pre-wrap">{c.text}</span>
+                    <LinkifiedText text={c.text} className="whitespace-pre-wrap" />
                   </ExpandableText>
                 </div>
               </div>
             );
           })
         )}
-        <form onSubmit={handleSubmit} className="flex gap-2 pt-1">
-          <Input data-testid={`comment-input-${postId}`} value={newComment} onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Write a comment..." className="flex-1 bg-white dark:bg-[#0F172A] discuss:bg-[#262626] border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] dark:placeholder:text-[#6275AF] discuss:placeholder:text-[#9CA3AF] focus:border-[#2563EB] discuss:focus:border-[#EF4444] focus:ring-2 focus:ring-[#2563EB]/20 discuss:focus:ring-[#EF4444]/20 rounded-xl text-[13px]" />
-          <Button type="submit" data-testid={`comment-submit-${postId}`} disabled={submitting || !newComment.trim()}
-            className="bg-[#2563EB] discuss:bg-[#EF4444] text-white hover:bg-[#1D4ED8] discuss:hover:bg-[#DC2626] rounded-xl px-3 shadow-sm discuss:shadow-none shrink-0">
-            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-          </Button>
+        
+        {/* Comment Input */}
+        <form onSubmit={handleSubmit} className="space-y-2">
+          <div className="relative">
+            <Textarea 
+              data-testid={`comment-input-${postId}`} 
+              value={newComment} 
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="Write a comment... (URLs will be clickable)"
+              rows={2}
+              className="w-full bg-white dark:bg-[#0F172A] discuss:bg-[#262626] border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] dark:placeholder:text-[#6275AF] discuss:placeholder:text-[#9CA3AF] focus:border-[#2563EB] discuss:focus:border-[#EF4444] focus:ring-2 focus:ring-[#2563EB]/20 discuss:focus:ring-[#EF4444]/20 rounded-xl text-[13px] resize-none pr-12"
+            />
+            <Button 
+              type="submit" 
+              data-testid={`comment-submit-${postId}`} 
+              disabled={submitting || !newComment.trim() || isOverLimit}
+              className="absolute right-2 bottom-2 bg-[#2563EB] discuss:bg-[#EF4444] text-white hover:bg-[#1D4ED8] discuss:hover:bg-[#DC2626] rounded-lg px-3 py-1.5 h-auto shadow-sm discuss:shadow-none"
+            >
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            </Button>
+          </div>
+          <div className="flex justify-between items-center px-1">
+            <span className="text-[#6275AF] dark:text-[#94A3B8] text-[10px]">
+              URLs starting with http://, https://, or www. will be clickable
+            </span>
+            <span className={`text-[10px] ${isOverLimit ? 'text-[#EF4444] font-medium' : 'text-[#6275AF] dark:text-[#94A3B8]'}`}>
+              {charCount}/{COMMENT_CHAR_LIMIT}
+            </span>
+          </div>
         </form>
       </div>
+      
+      {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
         <AlertDialogContent className="dark:bg-[#1E293B] dark:border-[#334155] discuss:bg-[#262626] discuss:border-[#333333]">
           <AlertDialogHeader><AlertDialogTitle className="dark:text-[#F1F5F9] discuss:text-[#F5F5F5]">Delete comment?</AlertDialogTitle>

@@ -218,17 +218,25 @@ export const getPostById = async (postId) => {
   const postRef = ref(database, `posts/${postId}`);
   const votesRef = ref(database, `votes/${postId}`);
   const commentsRef = ref(database, `comments/${postId}`);
-  const secondaryCommentsRef = secondaryRef(secondaryDatabase, `comments/${postId}`);
   
-  const [postSnap, votesSnap, commentsSnap, secondaryCommentsSnap] = await Promise.all([
-    get(postRef), get(votesRef), get(commentsRef), secondaryGet(secondaryCommentsRef)
+  const [postSnap, votesSnap, commentsSnap] = await Promise.all([
+    get(postRef), get(votesRef), get(commentsRef)
   ]);
   
   if (!postSnap.exists()) return null;
   
+  // Fetch secondary comments separately
+  let newComments = {};
+  try {
+    const secondaryCommentsRef = secondaryRef(secondaryDatabase, `comments/${postId}`);
+    const secondaryCommentsSnap = await secondaryGet(secondaryCommentsRef);
+    newComments = secondaryCommentsSnap.exists() ? secondaryCommentsSnap.val() : {};
+  } catch (e) {
+    console.warn('Failed to fetch secondary comments:', e);
+  }
+  
   const postVotes = votesSnap.exists() ? votesSnap.val() : {};
   const oldComments = commentsSnap.exists() ? commentsSnap.val() : {};
-  const newComments = secondaryCommentsSnap.exists() ? secondaryCommentsSnap.val() : {};
   
   // Count comments from both databases
   const totalCommentCount = Object.keys(oldComments).length + Object.keys(newComments).length;
@@ -247,16 +255,24 @@ export const getPostsByUser = async (userId) => {
   const postsRef = ref(database, 'posts');
   const votesRef = ref(database, 'votes');
   const commentsRef = ref(database, 'comments');
-  const secondaryCommentsRef = secondaryRef(secondaryDatabase, 'comments');
   
-  const [postsSnap, votesSnap, commentsSnap, secondaryCommentsSnap] = await Promise.all([
-    get(postsRef), get(votesRef), get(commentsRef), secondaryGet(secondaryCommentsRef)
+  const [postsSnap, votesSnap, commentsSnap] = await Promise.all([
+    get(postsRef), get(votesRef), get(commentsRef)
   ]);
+  
+  // Fetch secondary database separately
+  let secondaryComments = {};
+  try {
+    const secondaryCommentsRef = secondaryRef(secondaryDatabase, 'comments');
+    const secondaryCommentsSnap = await secondaryGet(secondaryCommentsRef);
+    secondaryComments = secondaryCommentsSnap.exists() ? secondaryCommentsSnap.val() : {};
+  } catch (e) {
+    console.warn('Failed to fetch secondary comments:', e);
+  }
   
   const posts = postsSnap.exists() ? postsSnap.val() : {};
   const votes = votesSnap.exists() ? votesSnap.val() : {};
   const comments = commentsSnap.exists() ? commentsSnap.val() : {};
-  const secondaryComments = secondaryCommentsSnap.exists() ? secondaryCommentsSnap.val() : {};
   
   return Object.entries(posts)
     .filter(([, p]) => p.author_id === userId)
@@ -284,19 +300,27 @@ export const getPosts = async (searchQuery = null) => {
   const postsRef = ref(database, 'posts');
   const votesRef = ref(database, 'votes');
   const commentsRef = ref(database, 'comments');
-  const secondaryCommentsRef = secondaryRef(secondaryDatabase, 'comments');
   
-  const [postsSnap, votesSnap, commentsSnap, secondaryCommentsSnap] = await Promise.all([
+  // Fetch primary database
+  const [postsSnap, votesSnap, commentsSnap] = await Promise.all([
     get(postsRef),
     get(votesRef),
-    get(commentsRef),
-    secondaryGet(secondaryCommentsRef)
+    get(commentsRef)
   ]);
+  
+  // Fetch secondary database separately to handle errors gracefully
+  let secondaryComments = {};
+  try {
+    const secondaryCommentsRef = secondaryRef(secondaryDatabase, 'comments');
+    const secondaryCommentsSnap = await secondaryGet(secondaryCommentsRef);
+    secondaryComments = secondaryCommentsSnap.exists() ? secondaryCommentsSnap.val() : {};
+  } catch (e) {
+    console.warn('Failed to fetch secondary comments:', e);
+  }
   
   const posts = postsSnap.exists() ? postsSnap.val() : {};
   const votes = votesSnap.exists() ? votesSnap.val() : {};
   const comments = commentsSnap.exists() ? commentsSnap.val() : {};
-  const secondaryComments = secondaryCommentsSnap.exists() ? secondaryCommentsSnap.val() : {};
   
   let postsList = Object.entries(posts).map(([id, post]) => {
     const postVotes = votes[id] || {};

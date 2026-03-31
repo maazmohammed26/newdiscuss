@@ -285,12 +285,12 @@ export default function ProfilePage() {
                   <h4 className="font-semibold text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] text-sm">Profile Settings</h4>
                   
                   <div className="flex items-start gap-2 text-[12px] text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF]">
-                    <ImageIcon className="w-4 h-4 mt-0.5 shrink-0" />
-                    <p>Profile image can only be changed through your Google account. Sign in with Google to update your profile picture.</p>
+                    <ImageIcon className="w-4 h-4 mt-0.5 shrink-0 text-[#2563EB] discuss:text-[#EF4444]" />
+                    <p>Profile image can only be added or changed through your Gmail account. When you sign in with Google, your Gmail profile picture will automatically sync here.</p>
                   </div>
                   
                   <div className="flex items-start gap-2 text-[12px] text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF]">
-                    <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0" />
+                    <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0 text-[#2563EB] discuss:text-[#EF4444]" />
                     <p>Password change is currently disabled for security reasons.</p>
                   </div>
                   
