@@ -1,5 +1,11 @@
-import { useState, useEffect } from 'react';
-import { getComments, createComment, deleteComment, subscribeToCommentsRealtime } from '@/lib/db';
+import { useState, useEffect, useCallback } from 'react';
+import { getComments, subscribeToCommentsRealtime } from '@/lib/db';
+import { 
+  createCommentFirestore, 
+  getCommentsFirestore, 
+  deleteCommentFirestore,
+  subscribeToCommentsFirestore 
+} from '@/lib/commentsDb';
 import ExpandableText from '@/components/ExpandableText';
 import VerifiedBadge from '@/components/VerifiedBadge';
 import CommentUserInfoModal from '@/components/CommentUserInfoModal';
@@ -26,34 +32,62 @@ function timeAgo(iso) {
 }
 
 export default function CommentsSection({ postId, postAuthorId, currentUser }) {
-  const [comments, setComments] = useState([]);
+  const [oldComments, setOldComments] = useState([]); // From Realtime DB (primary Firebase)
+  const [newComments, setNewComments] = useState([]); // From Firestore (secondary Firebase)
   const [newComment, setNewComment] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loadingOld, setLoadingOld] = useState(true);
+  const [loadingNew, setLoadingNew] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
-  const [userInfoModal, setUserInfoModal] = useState(null); // Store userId for modal
+  const [userInfoModal, setUserInfoModal] = useState(null);
 
+  // Combine and sort all comments by timestamp
+  const allComments = [...oldComments, ...newComments].sort(
+    (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+  );
+
+  const loading = loadingOld || loadingNew;
+
+  // Fetch old comments from Realtime Database (primary Firebase)
   useEffect(() => {
     getComments(postId).then(data => {
-      setComments(data);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+      setOldComments(data.map(c => ({ ...c, source: 'realtime' })));
+      setLoadingOld(false);
+    }).catch(() => setLoadingOld(false));
 
     const unsubscribe = subscribeToCommentsRealtime(postId, (updatedComments) => {
-      setComments(updatedComments);
-      setLoading(false);
+      setOldComments(updatedComments.map(c => ({ ...c, source: 'realtime' })));
+      setLoadingOld(false);
     });
 
     return () => unsubscribe();
   }, [postId]);
 
+  // Fetch new comments from Firestore (secondary Firebase)
+  useEffect(() => {
+    getCommentsFirestore(postId).then(data => {
+      setNewComments(data.map(c => ({ ...c, source: 'firestore' })));
+      setLoadingNew(false);
+    }).catch(() => setLoadingNew(false));
+
+    const unsubscribe = subscribeToCommentsFirestore(postId, (updatedComments) => {
+      setNewComments(updatedComments.map(c => ({ ...c, source: 'firestore' })));
+      setLoadingNew(false);
+    });
+
+    return () => unsubscribe();
+  }, [postId]);
+
+  // Submit new comment to Firestore (secondary Firebase)
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!newComment.trim()) return;
     setSubmitting(true);
     try {
-      await createComment(postId, newComment.trim(), currentUser);
+      const comment = await createCommentFirestore(postId, newComment.trim(), currentUser);
+      // Optimistically add to newComments
+      setNewComments(prev => [...prev, { ...comment, source: 'firestore' }]);
       setNewComment('');
     } catch (err) {
       toast.error(err.message || 'Failed to add comment');
@@ -62,12 +96,24 @@ export default function CommentsSection({ postId, postAuthorId, currentUser }) {
     }
   };
 
+  // Delete comment - handle both sources
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
+    
+    const targetComment = allComments.find(c => c.id === deleteTarget);
+    
     try {
-      await deleteComment(postId, deleteTarget, currentUser.id);
-      setComments((prev) => prev.filter((c) => c.id !== deleteTarget));
+      if (targetComment?.source === 'firestore') {
+        // Delete from Firestore
+        await deleteCommentFirestore(deleteTarget, currentUser.id);
+        setNewComments(prev => prev.filter(c => c.id !== deleteTarget));
+      } else {
+        // Delete from Realtime DB (use existing db function)
+        const { deleteComment } = await import('@/lib/db');
+        await deleteComment(postId, deleteTarget, currentUser.id);
+        setOldComments(prev => prev.filter(c => c.id !== deleteTarget));
+      }
       toast.success('Comment deleted');
     } catch (err) {
       toast.error(err.message || 'Failed to delete comment');
@@ -78,26 +124,29 @@ export default function CommentsSection({ postId, postAuthorId, currentUser }) {
   };
 
   return (
-    <div data-testid={`comments-section-${postId}`} className="border-t border-[#E2E8F0] dark:border-[#334155] bg-[#F8FAFC]/30 dark:bg-[#0F172A]/30">
+    <div data-testid={`comments-section-${postId}`} className="border-t border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333] bg-[#F8FAFC]/30 dark:bg-[#0F172A]/30 discuss:bg-[#1a1a1a]/30">
       <div className="p-4 space-y-3">
         {loading ? (
-          <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-[#6275AF]" /></div>
-        ) : comments.length === 0 ? (
-          <p className="text-[#6275AF] dark:text-[#94A3B8] text-[13px] text-center py-3">No comments yet. Be the first!</p>
+          <div className="flex justify-center items-center gap-2 py-4">
+            <Loader2 className="w-5 h-5 animate-spin text-[#6275AF]" />
+            <span className="text-[#6275AF] dark:text-[#94A3B8] text-xs">Loading comments...</span>
+          </div>
+        ) : allComments.length === 0 ? (
+          <p className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-[13px] text-center py-3">No comments yet. Be the first!</p>
         ) : (
-          comments.map((c) => {
+          allComments.map((c) => {
             const isPostAuthor = c.author_id === postAuthorId;
-            const isCurrentUser = c.author_id === currentUser?.id; // Check if current user
-            const isClickable = !isCurrentUser; // Only clickable if NOT current user
+            const isCurrentUser = c.author_id === currentUser?.id;
+            const isClickable = !isCurrentUser;
             
             return (
               <div 
                 key={c.id} 
                 data-testid={`comment-${c.id}`} 
-                className={`border-l-4 rounded-r-md pl-4 py-3 pr-3 shadow-sm dark:shadow-none ${
+                className={`border-l-4 rounded-r-md pl-4 py-3 pr-3 shadow-sm dark:shadow-none discuss:shadow-none ${
                   isPostAuthor 
-                    ? 'border-[#BC4800] bg-[#BC4800]/5 dark:bg-[#BC4800]/10' 
-                    : 'border-[#2563EB] bg-white dark:bg-[#1E293B]'
+                    ? 'border-[#BC4800] discuss:border-[#EF4444] bg-[#BC4800]/5 dark:bg-[#BC4800]/10 discuss:bg-[#EF4444]/10' 
+                    : 'border-[#2563EB] discuss:border-[#EF4444] bg-white dark:bg-[#1E293B] discuss:bg-[#262626]'
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
@@ -119,11 +168,11 @@ export default function CommentsSection({ postId, postAuthorId, currentUser }) {
                       {c.author_verified && <VerifiedBadge size="xs" />}
                     </div>
                     {isPostAuthor && (
-                      <span data-testid={`comment-author-badge-${c.id}`} className="bg-[#BC4800]/15 text-[#BC4800] text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded">
+                      <span data-testid={`comment-author-badge-${c.id}`} className="bg-[#BC4800]/15 discuss:bg-[#EF4444]/15 text-[#BC4800] discuss:text-[#EF4444] text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded">
                         Author
                       </span>
                     )}
-                    <span className="text-[#6275AF] dark:text-[#94A3B8] text-xs">{timeAgo(c.timestamp)}</span>
+                    <span className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-xs">{timeAgo(c.timestamp)}</span>
                   </div>
                   {currentUser?.id === c.author_id && (
                     <button data-testid={`comment-delete-btn-${c.id}`} onClick={() => setDeleteTarget(c.id)}
@@ -132,7 +181,7 @@ export default function CommentsSection({ postId, postAuthorId, currentUser }) {
                     </button>
                   )}
                 </div>
-                <div data-testid={`comment-text-${c.id}`} className="text-[#0F172A] dark:text-[#E2E8F0] text-[13px] md:text-[15px] mt-1 leading-relaxed">
+                <div data-testid={`comment-text-${c.id}`} className="text-[#0F172A] dark:text-[#E2E8F0] discuss:text-[#E5E7EB] text-[13px] md:text-[15px] mt-1 leading-relaxed">
                   <ExpandableText text={c.text} maxLines={4}>
                     <span className="whitespace-pre-wrap">{c.text}</span>
                   </ExpandableText>
@@ -143,19 +192,19 @@ export default function CommentsSection({ postId, postAuthorId, currentUser }) {
         )}
         <form onSubmit={handleSubmit} className="flex gap-2 pt-1">
           <Input data-testid={`comment-input-${postId}`} value={newComment} onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Write a comment..." className="flex-1 bg-white dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#6275AF] focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 rounded-xl text-[13px]" />
+            placeholder="Write a comment..." className="flex-1 bg-white dark:bg-[#0F172A] discuss:bg-[#262626] border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] dark:placeholder:text-[#6275AF] discuss:placeholder:text-[#9CA3AF] focus:border-[#2563EB] discuss:focus:border-[#EF4444] focus:ring-2 focus:ring-[#2563EB]/20 discuss:focus:ring-[#EF4444]/20 rounded-xl text-[13px]" />
           <Button type="submit" data-testid={`comment-submit-${postId}`} disabled={submitting || !newComment.trim()}
-            className="bg-[#2563EB] text-white hover:bg-[#1D4ED8] rounded-xl px-3 shadow-sm shrink-0">
+            className="bg-[#2563EB] discuss:bg-[#EF4444] text-white hover:bg-[#1D4ED8] discuss:hover:bg-[#DC2626] rounded-xl px-3 shadow-sm discuss:shadow-none shrink-0">
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </Button>
         </form>
       </div>
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
-        <AlertDialogContent className="dark:bg-[#1E293B] dark:border-[#334155]">
-          <AlertDialogHeader><AlertDialogTitle className="dark:text-[#F1F5F9]">Delete comment?</AlertDialogTitle>
-            <AlertDialogDescription className="dark:text-[#94A3B8]">This will permanently delete your comment.</AlertDialogDescription></AlertDialogHeader>
+        <AlertDialogContent className="dark:bg-[#1E293B] dark:border-[#334155] discuss:bg-[#262626] discuss:border-[#333333]">
+          <AlertDialogHeader><AlertDialogTitle className="dark:text-[#F1F5F9] discuss:text-[#F5F5F5]">Delete comment?</AlertDialogTitle>
+            <AlertDialogDescription className="dark:text-[#94A3B8] discuss:text-[#9CA3AF]">This will permanently delete your comment.</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel data-testid="comment-delete-cancel" className="dark:bg-[#334155] dark:text-[#F1F5F9] dark:border-[#334155] dark:hover:bg-[#475569]">Cancel</AlertDialogCancel>
+            <AlertDialogCancel data-testid="comment-delete-cancel" className="dark:bg-[#334155] dark:text-[#F1F5F9] dark:border-[#334155] dark:hover:bg-[#475569] discuss:bg-[#333333] discuss:text-[#F5F5F5] discuss:border-[#333333] discuss:hover:bg-[#404040]">Cancel</AlertDialogCancel>
             <AlertDialogAction data-testid="comment-delete-confirm" onClick={handleDelete} disabled={deleting} className="bg-[#EF4444] text-white hover:bg-[#DC2626]">
               {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Delete'}
             </AlertDialogAction>

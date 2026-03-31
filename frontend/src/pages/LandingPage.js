@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
@@ -8,7 +8,7 @@ import PWAInstallBanner from '@/components/PWAInstallBanner';
 import AdminMessageBanner from '@/components/AdminMessageBanner';
 import DiscussLogo from '@/components/DiscussLogo';
 import ThemeToggle from '@/components/ThemeToggle';
-import { ArrowRight, MessageSquare, FolderGit2, Zap, Linkedin, Users, Shield, Code } from 'lucide-react';
+import { ArrowRight, MessageSquare, FolderGit2, Zap, Linkedin, Users, Shield, Code, Loader2 } from 'lucide-react';
 
 const features = [
   { icon: MessageSquare, title: 'Crafted for clarity.', desc: 'Designed to elevate the user experience through silence and space. Every element serves a purpose.' },
@@ -18,13 +18,45 @@ const features = [
 ];
 
 export default function LandingPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
+
+  // Redirect to feed if user is already logged in
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate('/feed', { replace: true });
+    }
+  }, [user, authLoading, navigate]);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 2000);
     return () => clearTimeout(timer);
   }, []);
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#0F172A] discuss:bg-[#121212] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-[#2563EB] discuss:text-[#EF4444] mx-auto mb-3" />
+          <p className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-sm">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is logged in, show loading while redirecting
+  if (user) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#0F172A] discuss:bg-[#121212] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-[#2563EB] discuss:text-[#EF4444] mx-auto mb-3" />
+          <p className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-sm">Redirecting to feed...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return <LoadingScreen message="Preparing your experience..." />;
@@ -46,26 +78,16 @@ export default function LandingPage() {
             A curated editorial space for meaningful projects. We've stripped away the noise to leave only what matters: the conversation and the craft.
           </p>
           <div className="mt-8 flex flex-col gap-3 max-w-sm mx-auto">
-            {user ? (
-              <Link to="/feed">
-                <Button data-testid="hero-go-to-feed" data-primary="true" className="w-full bg-[#2563EB] hover:bg-[#1D4ED8] discuss:bg-[#EF4444] discuss:hover:bg-[#DC2626] text-white font-semibold rounded-full px-8 py-3 text-base shadow-lg shadow-[#2563EB]/20 discuss:shadow-none transition-all">
-                  Go to Feed <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </Link>
-            ) : (
-              <>
-                <Link to="/register">
-                  <Button data-testid="hero-register-btn" data-primary="true" className="w-full bg-[#2563EB] hover:bg-[#1D4ED8] discuss:bg-[#EF4444] discuss:hover:bg-[#DC2626] text-white font-semibold rounded-full px-8 py-3 text-base shadow-lg shadow-[#2563EB]/20 discuss:shadow-none transition-all">
-                    Start a project <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </Link>
-                <Link to="/login">
-                  <Button data-testid="hero-login-btn" variant="outline" className="w-full bg-[#E8EBF0] dark:bg-[#1E293B] discuss:bg-[#262626] hover:bg-[#D9DDE4] dark:hover:bg-[#334155] discuss:hover:bg-[#333333] text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] font-medium rounded-full px-8 py-3 text-base border-0 transition-all">
-                    Explore feed
-                  </Button>
-                </Link>
-              </>
-            )}
+            <Link to="/register">
+              <Button data-testid="hero-register-btn" data-primary="true" className="w-full bg-[#2563EB] hover:bg-[#1D4ED8] discuss:bg-[#EF4444] discuss:hover:bg-[#DC2626] text-white font-semibold rounded-full px-8 py-3 text-base shadow-lg shadow-[#2563EB]/20 discuss:shadow-none transition-all">
+                Start a project <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </Link>
+            <Link to="/login">
+              <Button data-testid="hero-login-btn" variant="outline" className="w-full bg-[#E8EBF0] dark:bg-[#1E293B] discuss:bg-[#262626] hover:bg-[#D9DDE4] dark:hover:bg-[#334155] discuss:hover:bg-[#333333] text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] font-medium rounded-full px-8 py-3 text-base border-0 transition-all">
+                Explore feed
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
@@ -103,13 +125,11 @@ export default function LandingPage() {
           </div>
           <h2 className="font-heading text-2xl sm:text-3xl font-bold text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] mb-3">Ready to join?</h2>
           <p className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-[14px] mb-6">Join developers sharing knowledge and projects.</p>
-          {!user && (
-            <Link to="/register">
-              <Button data-testid="cta-register-btn" data-primary="true" className="bg-[#2563EB] hover:bg-[#1D4ED8] discuss:bg-[#EF4444] discuss:hover:bg-[#DC2626] text-white font-semibold rounded-full px-8 py-3 shadow-lg shadow-[#2563EB]/20 discuss:shadow-none">
-                Create Free Account <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </Link>
-          )}
+          <Link to="/register">
+            <Button data-testid="cta-register-btn" data-primary="true" className="bg-[#2563EB] hover:bg-[#1D4ED8] discuss:bg-[#EF4444] discuss:hover:bg-[#DC2626] text-white font-semibold rounded-full px-8 py-3 shadow-lg shadow-[#2563EB]/20 discuss:shadow-none">
+              Create Free Account <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </Link>
         </div>
       </section>
 

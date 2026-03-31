@@ -15,6 +15,7 @@ import {
 } from '@/lib/firebase';
 import { database, ref, onValue, off } from '@/lib/firebase';
 import { createUser, getUser, getUserByEmail, checkUsernameAvailable, updateUser, syncUserVerificationEverywhere } from '@/lib/db';
+import { syncUserVerificationInCommentsFirestore } from '@/lib/commentsDb';
 
 const AuthContext = createContext(null);
 
@@ -169,8 +170,9 @@ export function AuthProvider({ children }) {
         // Check if verified status changed
         if (previousVerified !== newVerified) {
           console.log(`Verification status changed: ${previousVerified} → ${newVerified}`);
-          // Sync verification status across all posts and comments
+          // Sync verification status across all posts and comments (both databases)
           syncUserVerificationEverywhere(user.id, newVerified).catch(console.error);
+          syncUserVerificationInCommentsFirestore(user.id, newVerified).catch(console.error);
           previousVerified = newVerified;
         }
         
