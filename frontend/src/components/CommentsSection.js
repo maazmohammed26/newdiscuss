@@ -79,15 +79,14 @@ export default function CommentsSection({ postId, postAuthorId, currentUser }) {
     return () => unsubscribe();
   }, [postId]);
 
-  // Submit new comment to Firestore (secondary Firebase)
+  // Submit new comment to secondary Realtime Database
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!newComment.trim()) return;
     setSubmitting(true);
     try {
-      const comment = await createCommentFirestore(postId, newComment.trim(), currentUser);
-      // Optimistically add to newComments
-      setNewComments(prev => [...prev, { ...comment, source: 'firestore' }]);
+      await createCommentFirestore(postId, newComment.trim(), currentUser);
+      // Don't add optimistically - real-time subscription will handle it
       setNewComment('');
     } catch (err) {
       toast.error(err.message || 'Failed to add comment');
