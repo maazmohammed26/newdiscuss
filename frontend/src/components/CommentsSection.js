@@ -105,11 +105,11 @@ export default function CommentsSection({ postId, postAuthorId, currentUser }) {
     
     try {
       if (targetComment?.source === 'firestore') {
-        // Delete from Firestore
-        await deleteCommentFirestore(deleteTarget, currentUser.id);
+        // Delete from secondary Realtime DB
+        await deleteCommentFirestore(deleteTarget, currentUser.id, postId);
         setNewComments(prev => prev.filter(c => c.id !== deleteTarget));
       } else {
-        // Delete from Realtime DB (use existing db function)
+        // Delete from primary Realtime DB (use existing db function)
         const { deleteComment } = await import('@/lib/db');
         await deleteComment(postId, deleteTarget, currentUser.id);
         setOldComments(prev => prev.filter(c => c.id !== deleteTarget));

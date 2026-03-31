@@ -1,38 +1,34 @@
-// User Profile Database Service - Uses Secondary Firebase (Firestore)
+// User Profile Database Service - Uses Secondary Firebase (Realtime Database)
 // Stores: fullName, bio, socialLinks
 // Uses same Auth UID as primary Firebase for sync
 
 import {
-  firestoreDb,
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteField,
-  serverTimestamp
+  secondaryDatabase,
+  ref,
+  get,
+  set,
+  update,
+  remove
 } from './firebaseSecondary';
-
-// Collection name for user profiles
-const USER_PROFILES_COLLECTION = 'userProfiles';
 
 // Character limit for bio
 export const BIO_CHAR_LIMIT = 500;
 
 /**
- * Get user profile from Firestore
+ * Get user profile from Realtime Database
  * @param {string} userId - Firebase Auth UID
  * @returns {Promise<Object|null>} User profile data or null
  */
 export const getUserProfile = async (userId) => {
   try {
-    const profileRef = doc(firestoreDb, USER_PROFILES_COLLECTION, userId);
-    const profileSnap = await getDoc(profileRef);
+    const profileRef = ref(secondaryDatabase, `userProfiles/${userId}`);
+    const snapshot = await get(profileRef);
     
-    if (profileSnap.exists()) {
+    if (snapshot.exists()) {
       return {
         id: userId,
-        ...profileSnap.data(),
-        socialLinks: profileSnap.data().socialLinks || []
+        ...snapshot.val(),
+        socialLinks: snapshot.val().socialLinks || []
       };
     }
     return null;
@@ -43,27 +39,27 @@ export const getUserProfile = async (userId) => {
 };
 
 /**
- * Create or update user profile in Firestore
+ * Create or update user profile in Realtime Database
  * @param {string} userId - Firebase Auth UID
  * @param {Object} profileData - Profile data to save
  * @returns {Promise<Object>} Updated profile data
  */
 export const saveUserProfile = async (userId, profileData) => {
   try {
-    const profileRef = doc(firestoreDb, USER_PROFILES_COLLECTION, userId);
-    const profileSnap = await getDoc(profileRef);
+    const profileRef = ref(secondaryDatabase, `userProfiles/${userId}`);
+    const snapshot = await get(profileRef);
     
     const dataToSave = {
       ...profileData,
-      updatedAt: serverTimestamp()
+      updatedAt: new Date().toISOString()
     };
     
-    if (profileSnap.exists()) {
-      await updateDoc(profileRef, dataToSave);
+    if (snapshot.exists()) {
+      await update(profileRef, dataToSave);
     } else {
-      await setDoc(profileRef, {
+      await set(profileRef, {
         ...dataToSave,
-        createdAt: serverTimestamp()
+        createdAt: new Date().toISOString()
       });
     }
     
@@ -89,11 +85,12 @@ export const updateFullName = async (userId, fullName) => {
  */
 export const deleteFullName = async (userId) => {
   try {
-    const profileRef = doc(firestoreDb, USER_PROFILES_COLLECTION, userId);
-    await updateDoc(profileRef, {
-      fullName: deleteField(),
-      updatedAt: serverTimestamp()
-    });
+    const fullNameRef = ref(secondaryDatabase, `userProfiles/${userId}/fullName`);
+    await remove(fullNameRef);
+    
+    // Update the updatedAt timestamp
+    const profileRef = ref(secondaryDatabase, `userProfiles/${userId}`);
+    await update(profileRef, { updatedAt: new Date().toISOString() });
   } catch (error) {
     console.error('Error deleting full name:', error);
     throw error;
@@ -116,11 +113,12 @@ export const updateBio = async (userId, bio) => {
  */
 export const deleteBio = async (userId) => {
   try {
-    const profileRef = doc(firestoreDb, USER_PROFILES_COLLECTION, userId);
-    await updateDoc(profileRef, {
-      bio: deleteField(),
-      updatedAt: serverTimestamp()
-    });
+    const bioRef = ref(secondaryDatabase, `userProfiles/${userId}/bio`);
+    await remove(bioRef);
+    
+    // Update the updatedAt timestamp
+    const profileRef = ref(secondaryDatabase, `userProfiles/${userId}`);
+    await update(profileRef, { updatedAt: new Date().toISOString() });
   } catch (error) {
     console.error('Error deleting bio:', error);
     throw error;
