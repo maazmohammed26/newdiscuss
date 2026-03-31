@@ -225,14 +225,20 @@ export const getPostById = async (postId) => {
   
   if (!postSnap.exists()) return null;
   
-  // Fetch secondary comments separately
+  // Fetch secondary comments with timeout
   let newComments = {};
   try {
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Secondary DB timeout')), 3000)
+    );
     const secondaryCommentsRef = secondaryRef(secondaryDatabase, `comments/${postId}`);
-    const secondaryCommentsSnap = await secondaryGet(secondaryCommentsRef);
-    newComments = secondaryCommentsSnap.exists() ? secondaryCommentsSnap.val() : {};
+    const secondaryCommentsSnap = await Promise.race([
+      secondaryGet(secondaryCommentsRef),
+      timeoutPromise
+    ]);
+    newComments = secondaryCommentsSnap?.exists?.() ? secondaryCommentsSnap.val() : {};
   } catch (e) {
-    console.warn('Failed to fetch secondary comments:', e);
+    console.warn('Secondary database unavailable:', e.message);
   }
   
   const postVotes = votesSnap.exists() ? votesSnap.val() : {};
@@ -260,14 +266,20 @@ export const getPostsByUser = async (userId) => {
     get(postsRef), get(votesRef), get(commentsRef)
   ]);
   
-  // Fetch secondary database separately
+  // Fetch secondary database with timeout
   let secondaryComments = {};
   try {
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Secondary DB timeout')), 3000)
+    );
     const secondaryCommentsRef = secondaryRef(secondaryDatabase, 'comments');
-    const secondaryCommentsSnap = await secondaryGet(secondaryCommentsRef);
-    secondaryComments = secondaryCommentsSnap.exists() ? secondaryCommentsSnap.val() : {};
+    const secondaryCommentsSnap = await Promise.race([
+      secondaryGet(secondaryCommentsRef),
+      timeoutPromise
+    ]);
+    secondaryComments = secondaryCommentsSnap?.exists?.() ? secondaryCommentsSnap.val() : {};
   } catch (e) {
-    console.warn('Failed to fetch secondary comments:', e);
+    console.warn('Secondary database unavailable:', e.message);
   }
   
   const posts = postsSnap.exists() ? postsSnap.val() : {};
@@ -308,14 +320,21 @@ export const getPosts = async (searchQuery = null) => {
     get(commentsRef)
   ]);
   
-  // Fetch secondary database separately to handle errors gracefully
+  // Fetch secondary database with timeout - don't block if it fails
   let secondaryComments = {};
   try {
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Secondary DB timeout')), 3000)
+    );
     const secondaryCommentsRef = secondaryRef(secondaryDatabase, 'comments');
-    const secondaryCommentsSnap = await secondaryGet(secondaryCommentsRef);
-    secondaryComments = secondaryCommentsSnap.exists() ? secondaryCommentsSnap.val() : {};
+    const secondaryCommentsSnap = await Promise.race([
+      secondaryGet(secondaryCommentsRef),
+      timeoutPromise
+    ]);
+    secondaryComments = secondaryCommentsSnap?.exists?.() ? secondaryCommentsSnap.val() : {};
   } catch (e) {
-    console.warn('Failed to fetch secondary comments:', e);
+    // Secondary database unavailable - continue without it
+    console.warn('Secondary database unavailable (continuing without it):', e.message);
   }
   
   const posts = postsSnap.exists() ? postsSnap.val() : {};
@@ -575,26 +594,46 @@ export const subscribeToPostsRealtime = (callback) => {
   const postsRef = ref(database, 'posts');
   const votesRef = ref(database, 'votes');
   const commentsRef = ref(database, 'comments');
-  const secondCommentsRef = secondaryRef(secondaryDatabase, 'comments');
+  
+  let secondCommentsRef = null;
+  let secondaryListenerActive = false;
   
   const updatePosts = async () => {
-    const posts = await getPosts();
-    callback(posts);
+    try {
+      const posts = await getPosts();
+      callback(posts);
+    } catch (e) {
+      console.warn('Error updating posts:', e);
+    }
   };
   
   onValue(postsRef, updatePosts);
   onValue(votesRef, updatePosts);
   onValue(commentsRef, updatePosts);
   
-  // Also listen to secondary database comments for real-time count updates
-  secondaryOnValue(secondCommentsRef, updatePosts);
+  // Try to listen to secondary database comments (optional - don't block if fails)
+  try {
+    secondCommentsRef = secondaryRef(secondaryDatabase, 'comments');
+    secondaryOnValue(secondCommentsRef, updatePosts, (error) => {
+      console.warn('Secondary database listener error (non-blocking):', error.message);
+    });
+    secondaryListenerActive = true;
+  } catch (e) {
+    console.warn('Failed to setup secondary database listener (non-blocking):', e.message);
+  }
   
   // Return unsubscribe function
   return () => {
     off(postsRef);
     off(votesRef);
     off(commentsRef);
-    secondaryOff(secondCommentsRef);
+    if (secondaryListenerActive && secondCommentsRef) {
+      try {
+        secondaryOff(secondCommentsRef);
+      } catch (e) {
+        // Ignore errors when unsubscribing
+      }
+    }
   };
 };
 

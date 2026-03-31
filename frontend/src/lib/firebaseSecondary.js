@@ -31,11 +31,26 @@ const secondaryFirebaseConfig = {
 };
 
 // Initialize secondary app with unique name
-const secondaryApp = getApps().find(app => app.name === 'secondary') 
-  || initializeApp(secondaryFirebaseConfig, 'secondary');
+let secondaryApp = null;
+let secondaryDatabase = null;
+let initError = null;
 
-// Get Realtime Database instance from secondary app
-const secondaryDatabase = getDatabase(secondaryApp);
+try {
+  secondaryApp = getApps().find(app => app.name === 'secondary') 
+    || initializeApp(secondaryFirebaseConfig, 'secondary');
+  
+  // Get Realtime Database instance from secondary app
+  secondaryDatabase = getDatabase(secondaryApp);
+  console.log('Secondary Firebase initialized successfully');
+} catch (error) {
+  console.warn('Failed to initialize secondary Firebase:', error.message);
+  initError = error;
+}
+
+// Helper to check if secondary database is available
+export const isSecondaryDbAvailable = () => {
+  return secondaryDatabase !== null && initError === null;
+};
 
 export { 
   secondaryApp,

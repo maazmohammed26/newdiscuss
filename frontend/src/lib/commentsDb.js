@@ -109,28 +109,50 @@ export const deleteCommentFirestore = async (commentId, userId, postId) => {
  * @returns {Function} Unsubscribe function
  */
 export const subscribeToCommentsFirestore = (postId, callback) => {
-  const commentsRef = ref(secondaryDatabase, `comments/${postId}`);
+  let commentsRef = null;
+  let listenerActive = false;
   
-  const handleComments = (snapshot) => {
-    if (!snapshot.exists()) {
+  try {
+    commentsRef = ref(secondaryDatabase, `comments/${postId}`);
+    
+    const handleComments = (snapshot) => {
+      if (!snapshot.exists()) {
+        callback([]);
+        return;
+      }
+      
+      const comments = snapshot.val();
+      const commentsList = Object.entries(comments)
+        .map(([id, comment]) => ({
+          id,
+          ...comment
+        }))
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      
+      callback(commentsList);
+    };
+    
+    const handleError = (error) => {
+      console.warn('Secondary comments listener error (non-blocking):', error.message);
       callback([]);
-      return;
+    };
+    
+    onValue(commentsRef, handleComments, handleError);
+    listenerActive = true;
+  } catch (e) {
+    console.warn('Failed to setup secondary comments listener:', e.message);
+    callback([]);
+  }
+  
+  return () => {
+    if (listenerActive && commentsRef) {
+      try {
+        off(commentsRef);
+      } catch (e) {
+        // Ignore errors when unsubscribing
+      }
     }
-    
-    const comments = snapshot.val();
-    const commentsList = Object.entries(comments)
-      .map(([id, comment]) => ({
-        id,
-        ...comment
-      }))
-      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-    
-    callback(commentsList);
   };
-  
-  onValue(commentsRef, handleComments);
-  
-  return () => off(commentsRef, 'value', handleComments);
 };
 
 /**
