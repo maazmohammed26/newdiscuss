@@ -2,6 +2,12 @@ import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getPosts, getTrendingHashtags, subscribeToPostsRealtime } from '@/lib/db';
 import { searchUsers } from '@/lib/relationshipsDb';
+import { 
+  getCachedPosts, 
+  cachePosts, 
+  isCacheValid, 
+  CACHE_DURATION 
+} from '@/lib/cacheManager';
 import Header from '@/components/Header';
 import PostCard from '@/components/PostCard';
 import CreatePostModal from '@/components/CreatePostModal';
@@ -27,6 +33,47 @@ export default function FeedPage() {
   const [searchType, setSearchType] = useState('posts'); // 'posts' or 'users'
   const [userSearchResults, setUserSearchResults] = useState([]);
   const [searchingUsers, setSearchingUsers] = useState(false);
+  const [loadedFromCache, setLoadedFromCache] = useState(false);
+
+  // Load cached posts first for instant display, then fetch fresh data
+  useEffect(() => {
+    const loadWithCache = async () => {
+      try {
+        // Try to get cached posts first
+        const cachedData = await getCachedPosts();
+        if (cachedData && cachedData.length > 0) {
+          setAllPosts(cachedData);
+          setLoading(false);
+          setLoadedFromCache(true);
+        }
+        
+        // Check if cache is still valid
+        const isValid = await isCacheValid('posts', CACHE_DURATION.POSTS);
+        
+        // If cache is invalid or empty, fetch fresh data
+        if (!isValid || !cachedData || cachedData.length === 0) {
+          const freshData = await getPosts();
+          setAllPosts(freshData);
+          await cachePosts(freshData);
+          setLoadedFromCache(false);
+        }
+      } catch (err) {
+        console.error('Cache/fetch error:', err);
+        // Fallback to direct fetch
+        try {
+          const data = await getPosts();
+          setAllPosts(data);
+          await cachePosts(data);
+        } catch (fetchErr) {
+          console.error('Failed to fetch posts:', fetchErr);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadWithCache();
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setPageLoading(false), 1200);
@@ -65,6 +112,8 @@ export default function FeedPage() {
     try {
       const data = await getPosts();
       setAllPosts(data);
+      // Cache the fresh data
+      await cachePosts(data);
     } catch (err) {
       console.error('Failed to fetch posts:', err);
     } finally {
@@ -89,6 +138,9 @@ export default function FeedPage() {
     const unsubscribe = subscribeToPostsRealtime(async (updatedPosts) => {
       setAllPosts(updatedPosts);
       setLoading(false);
+      setLoadedFromCache(false);
+      // Update cache with fresh data
+      await cachePosts(updatedPosts);
       fetchTrendingTags();
     });
     return () => unsubscribe();

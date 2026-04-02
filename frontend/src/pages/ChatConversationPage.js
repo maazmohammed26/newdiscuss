@@ -17,9 +17,15 @@ import {
   deleteChat,
   CHAT_STATUS
 } from '@/lib/chatsDb';
+import { 
+  getCachedMessages, 
+  cacheMessages, 
+  addCachedMessage 
+} from '@/lib/cacheManager';
 import Header from '@/components/Header';
 import FriendRequestButton from '@/components/FriendRequestButton';
 import VerifiedBadge from '@/components/VerifiedBadge';
+import ChatLinkText from '@/components/ChatLinkText';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -119,12 +125,23 @@ export default function ChatConversationPage() {
     loadData();
   }, [user?.id, otherUserId]);
 
-  // Subscribe to messages
+  // Subscribe to messages with caching
   useEffect(() => {
     if (!chatId) return;
 
-    const unsubscribe = subscribeToMessages(chatId, (newMessages) => {
+    // Try to load cached messages first
+    const loadCachedMessages = async () => {
+      const cached = await getCachedMessages(chatId);
+      if (cached && cached.length > 0) {
+        setMessages(cached);
+      }
+    };
+    loadCachedMessages();
+
+    const unsubscribe = subscribeToMessages(chatId, async (newMessages) => {
       setMessages(newMessages);
+      // Cache the messages
+      await cacheMessages(chatId, newMessages);
       // Mark as read when messages arrive
       if (user?.id) {
         markMessagesAsRead(chatId, user.id);
@@ -415,7 +432,9 @@ export default function ChatConversationPage() {
                           : 'bg-white dark:bg-[#1E293B] discuss:bg-[#262626] text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333] rounded-bl-md'
                       }`}
                     >
-                      <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
+                      <p className="text-sm whitespace-pre-wrap break-words">
+                        <ChatLinkText text={message.text} />
+                      </p>
                       <p className={`text-[10px] mt-1 ${isOwn ? 'text-white/70' : 'text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF]'}`}>
                         {formatMessageTime(message.timestamp)}
                       </p>

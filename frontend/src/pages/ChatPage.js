@@ -4,6 +4,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getUser } from '@/lib/db';
 import { getChatsWithUserDetails, subscribeToUserChats, getUserChats, getChatSettings } from '@/lib/chatsDb';
 import { getFriendsWithDetails, searchFriends } from '@/lib/relationshipsDb';
+import { 
+  getCachedChats, 
+  cacheChats, 
+  getCachedFriends, 
+  cacheFriends 
+} from '@/lib/cacheManager';
 import Header from '@/components/Header';
 import VerifiedBadge from '@/components/VerifiedBadge';
 import { Button } from '@/components/ui/button';
@@ -25,12 +31,27 @@ export default function ChatPage() {
   const [activeTab, setActiveTab] = useState('chats'); // 'chats' or 'friends'
   const [chatSettings, setChatSettings] = useState({});
 
-  // Load chats and friends with user details inline
+  // Load chats and friends with user details inline - with caching
   useEffect(() => {
     if (!user?.id) return;
 
     const loadData = async () => {
       try {
+        // Try to get cached data first for instant loading
+        const [cachedChatsData, cachedFriendsData] = await Promise.all([
+          getCachedChats(user.id),
+          getCachedFriends(user.id)
+        ]);
+
+        // If we have cached data, show it immediately
+        if (cachedChatsData && cachedChatsData.length > 0) {
+          setChats(cachedChatsData);
+          setLoading(false);
+        }
+        if (cachedFriendsData && cachedFriendsData.length > 0) {
+          setFriends(cachedFriendsData);
+        }
+
         // Get raw chats first
         const rawChats = await getUserChats(user.id);
         
@@ -66,10 +87,14 @@ export default function ChatPage() {
         );
         
         setChats(chatsWithDetails);
+        // Cache the chats data
+        await cacheChats(user.id, chatsWithDetails);
         
         // Load friends
         const friendsData = await getFriendsWithDetails(user.id);
         setFriends(friendsData);
+        // Cache the friends data
+        await cacheFriends(user.id, friendsData);
       } catch (error) {
         console.error('Error loading chat data:', error);
       } finally {
@@ -347,8 +372,11 @@ export default function ChatPage() {
 
         {/* Content */}
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-[#6275AF]" />
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-[#2563EB] discuss:text-[#EF4444] mb-3" />
+            <p className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-sm font-medium">
+              {activeTab === 'chats' ? 'Loading chats...' : 'Loading friends list...'}
+            </p>
           </div>
         ) : displayData.length === 0 ? (
           <div className="text-center py-16 bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] rounded-2xl border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">

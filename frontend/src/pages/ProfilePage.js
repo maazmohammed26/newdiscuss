@@ -32,6 +32,7 @@ import VerificationRequestModal from '@/components/VerificationRequestModal';
 import UserAdminMessage from '@/components/UserAdminMessage';
 import ImagePreviewModal from '@/components/ImagePreviewModal';
 import UserSearchResult from '@/components/UserSearchResult';
+import ProfileShareModal from '@/components/ProfileShareModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -45,7 +46,7 @@ import {
 import { 
   FileText, LogOut, Loader2, ChevronDown, ChevronUp, 
   Calendar, Filter, ShieldCheck, User, Pencil, Trash2, Plus, Link2, X, Check, ExternalLink,
-  Info, Mail, Image as ImageIcon, Users, UserPlus, Search, Clock, MessageCircle
+  Info, Mail, Image as ImageIcon, Users, UserPlus, Search, Clock, MessageCircle, Share2
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -63,6 +64,7 @@ export default function ProfilePage() {
   const [filterYear, setFilterYear] = useState('');
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [showImagePreview, setShowImagePreview] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // Profile data from secondary Firebase
   const [profileData, setProfileData] = useState(null);
@@ -424,8 +426,18 @@ export default function ProfilePage() {
         {/* Profile Card */}
         <div className="bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] shadow-[0_4px_24px_rgba(0,0,0,0.06)] dark:shadow-none discuss:shadow-none border discuss:border discuss:border-[#333333] p-8 text-center relative">
           
-          {/* Info Icon - Top Right */}
-          <div className="absolute top-4 right-4">
+          {/* Top Right Icons - Share & Info */}
+          <div className="absolute top-4 right-4 flex items-center gap-1">
+            {/* Share Button */}
+            <button 
+              onClick={() => setShowShareModal(true)}
+              className="p-2 rounded-full hover:bg-[#F5F5F7] dark:hover:bg-[#0F172A] discuss:hover:bg-[#262626] text-[#6275AF] hover:text-[#2563EB] discuss:hover:text-[#EF4444] transition-colors"
+              title="Share Profile"
+            >
+              <Share2 className="w-5 h-5" />
+            </button>
+            
+            {/* Info Icon */}
             <Popover>
               <PopoverTrigger asChild>
                 <button className="p-2 rounded-full hover:bg-[#F5F5F7] dark:hover:bg-[#0F172A] discuss:hover:bg-[#262626] text-[#6275AF] hover:text-[#2563EB] discuss:hover:text-[#EF4444] transition-colors">
@@ -923,8 +935,9 @@ export default function ProfilePage() {
 
               {/* Friends List */}
               {loadingFriends ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-5 h-5 animate-spin text-[#6275AF]" />
+                <div className="flex flex-col items-center justify-center py-8 bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] rounded-xl border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">
+                  <Loader2 className="w-6 h-6 animate-spin text-[#2563EB] discuss:text-[#EF4444] mb-2" />
+                  <p className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-sm">Loading friends list...</p>
                 </div>
               ) : friends.length > 0 ? (
                 <div className="bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] rounded-xl p-4 border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">
@@ -1166,6 +1179,13 @@ export default function ProfilePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Profile Share Modal */}
+      <ProfileShareModal 
+        open={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        username={user?.username}
+      />
 
       <style jsx global>{`
         .scrollbar-hide::-webkit-scrollbar {

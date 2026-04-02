@@ -4,7 +4,7 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'discuss_cache';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 // Cache duration constants (in milliseconds)
 export const CACHE_DURATION = {
@@ -12,7 +12,8 @@ export const CACHE_DURATION = {
   USERS: 10 * 60 * 1000,      // 10 minutes
   FRIENDS: 2 * 60 * 1000,     // 2 minutes
   CHATS: 1 * 60 * 1000,       // 1 minute
-  PROFILE: 15 * 60 * 1000     // 15 minutes
+  PROFILE: 15 * 60 * 1000,    // 15 minutes
+  COMMENTS: 3 * 60 * 1000     // 3 minutes
 };
 
 /**
@@ -55,6 +56,13 @@ const getDB = async () => {
       // General cache store for metadata
       if (!db.objectStoreNames.contains('cache_meta')) {
         db.createObjectStore('cache_meta', { keyPath: 'key' });
+      }
+      
+      // Comments store - added in version 3
+      if (!db.objectStoreNames.contains('comments')) {
+        const commentsStore = db.createObjectStore('comments', { keyPath: 'cacheKey' });
+        commentsStore.createIndex('postId', 'postId');
+        commentsStore.createIndex('timestamp', 'timestamp');
       }
     },
   });
@@ -356,6 +364,76 @@ export const addCachedMessage = async (chatId, message) => {
   }
 };
 
+// ==================== COMMENTS CACHE ====================
+
+/**
+ * Cache comments for a post
+ */
+export const cacheComments = async (postId, comments) => {
+  try {
+    const db = await getDB();
+    await db.put('comments', { 
+      cacheKey: postId, 
+      postId,
+      comments, 
+      timestamp: Date.now() 
+    });
+  } catch (e) {
+    console.warn('Comments cache write failed:', e);
+  }
+};
+
+/**
+ * Get cached comments
+ */
+export const getCachedComments = async (postId) => {
+  try {
+    const db = await getDB();
+    const data = await db.get('comments', postId);
+    if (!data) return null;
+    
+    // Check if cache is still valid
+    if (Date.now() - data.timestamp > CACHE_DURATION.COMMENTS) {
+      return null; // Expired
+    }
+    
+    return data.comments;
+  } catch (e) {
+    console.warn('Comments cache read failed:', e);
+    return null;
+  }
+};
+
+/**
+ * Add single comment to cache
+ */
+export const addCachedComment = async (postId, comment) => {
+  try {
+    const cachedComments = await getCachedComments(postId);
+    if (cachedComments) {
+      const updatedComments = [...cachedComments, comment];
+      await cacheComments(postId, updatedComments);
+    }
+  } catch (e) {
+    console.warn('Add comment to cache failed:', e);
+  }
+};
+
+/**
+ * Remove comment from cache
+ */
+export const removeCachedComment = async (postId, commentId) => {
+  try {
+    const cachedComments = await getCachedComments(postId);
+    if (cachedComments) {
+      const updatedComments = cachedComments.filter(c => c.id !== commentId);
+      await cacheComments(postId, updatedComments);
+    }
+  } catch (e) {
+    console.warn('Remove comment from cache failed:', e);
+  }
+};
+
 // ==================== UTILITY FUNCTIONS ====================
 
 /**
@@ -369,6 +447,7 @@ export const clearAllCache = async () => {
     await db.clear('friends');
     await db.clear('chats');
     await db.clear('messages');
+    await db.clear('comments');
     await db.clear('cache_meta');
     console.log('All cache cleared');
   } catch (e) {

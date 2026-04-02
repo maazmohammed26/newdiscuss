@@ -6,6 +6,12 @@ import {
   deleteCommentFirestore,
   subscribeToCommentsFirestore 
 } from '@/lib/commentsDb';
+import { 
+  getCachedComments, 
+  cacheComments, 
+  addCachedComment, 
+  removeCachedComment 
+} from '@/lib/cacheManager';
 import ExpandableText from '@/components/ExpandableText';
 import VerifiedBadge from '@/components/VerifiedBadge';
 import CommentUserInfoModal from '@/components/CommentUserInfoModal';
@@ -70,15 +76,36 @@ export default function CommentsSection({ postId, postAuthorId, currentUser }) {
     return () => unsubscribe();
   }, [postId]);
 
-  // Fetch new comments from Realtime Database (secondary Firebase)
+  // Fetch new comments from Realtime Database (secondary Firebase) with caching
   useEffect(() => {
-    getCommentsFirestore(postId).then(data => {
-      setNewComments(data.map(c => ({ ...c, source: 'firestore' })));
-      setLoadingNew(false);
-    }).catch(() => setLoadingNew(false));
+    const loadComments = async () => {
+      // Try to get cached comments first
+      const cached = await getCachedComments(postId);
+      if (cached && cached.length > 0) {
+        setNewComments(cached.map(c => ({ ...c, source: 'firestore' })));
+        setLoadingNew(false);
+      }
 
-    const unsubscribe = subscribeToCommentsFirestore(postId, (updatedComments) => {
-      setNewComments(updatedComments.map(c => ({ ...c, source: 'firestore' })));
+      // Fetch fresh comments
+      try {
+        const data = await getCommentsFirestore(postId);
+        const commentsWithSource = data.map(c => ({ ...c, source: 'firestore' }));
+        setNewComments(commentsWithSource);
+        // Cache the comments
+        await cacheComments(postId, commentsWithSource);
+      } catch (err) {
+        console.error('Error loading comments:', err);
+      }
+      setLoadingNew(false);
+    };
+
+    loadComments();
+
+    const unsubscribe = subscribeToCommentsFirestore(postId, async (updatedComments) => {
+      const commentsWithSource = updatedComments.map(c => ({ ...c, source: 'firestore' }));
+      setNewComments(commentsWithSource);
+      // Update cache
+      await cacheComments(postId, commentsWithSource);
       setLoadingNew(false);
     });
 
