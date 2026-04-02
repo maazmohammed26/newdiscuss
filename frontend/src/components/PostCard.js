@@ -99,7 +99,7 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
   };
 
   return (
-    <div data-testid={`post-card-${post.id}`} className="bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333] shadow-[0_2px_12px_rgba(0,0,0,0.04)] dark:shadow-none discuss:shadow-none hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_4px_20px_rgba(0,0,0,0.2)] discuss:hover:shadow-none transition-all duration-200 overflow-hidden">
+    <div data-testid={`post-card-${post.id}`} className="bg-white dark:bg-neutral-800 discuss:bg-[#1a1a1a] border border-neutral-200 dark:border-neutral-700 discuss:border-[#333333] rounded-[12px] shadow-card hover:shadow-card-hover transition-all duration-200 overflow-hidden">
       {/* Content area */}
       <div className="p-4 md:p-5">
         {/* Header */}
@@ -107,27 +107,27 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
             <span data-testid={`post-badge-${post.id}`}
               className={isProject
-                ? 'bg-[#BC4800]/10 text-[#BC4800] discuss:bg-[#EF4444]/10 discuss:text-[#EF4444] border border-[#BC4800]/20 discuss:border-[#EF4444]/20 px-2.5 py-0.5 text-xs font-semibold shrink-0'
-                : 'bg-[#2563EB]/10 text-[#2563EB] discuss:bg-[#EF4444]/10 discuss:text-[#EF4444] dark:text-[#60A5FA] border border-[#2563EB]/20 discuss:border-[#EF4444]/20 px-2.5 py-0.5 text-xs font-semibold shrink-0'
+                ? 'bg-[#6275AF]/10 text-[#6275AF] discuss:bg-[#EF4444]/10 discuss:text-[#EF4444] border border-[#6275AF]/20 discuss:border-[#EF4444]/20 px-2.5 py-0.5 text-xs font-semibold rounded-[6px] shrink-0'
+                : 'bg-[#2563EB]/10 text-[#2563EB] discuss:bg-[#EF4444]/10 discuss:text-[#EF4444] dark:text-[#60A5FA] border border-[#2563EB]/20 discuss:border-[#EF4444]/20 px-2.5 py-0.5 text-xs font-semibold rounded-[6px] shrink-0'
               }>
               {isProject ? 'Project' : 'Discussion'}
             </span>
             <button
               data-testid={`post-author-${post.id}`}
               onClick={handleUsernameClick}
-              className="font-semibold text-[#1D7AFF] discuss:text-[#F5F5F5] discuss:hover:text-[#EF4444] hover:underline text-[13px] md:text-[15px] cursor-pointer transition-colors flex items-center gap-1"
+              className="font-semibold text-[#2563EB] discuss:text-[#F5F5F5] discuss:hover:text-[#EF4444] hover:underline text-[13px] md:text-[15px] cursor-pointer transition-colors flex items-center gap-1"
             >
               {post.author_username}
               {post.author_verified && <VerifiedBadge size="xs" />}
             </button>
-            <span className="text-[#94A3B8] dark:text-[#64748B] discuss:text-[#9CA3AF] text-xs shrink-0">{timeAgo(post.timestamp)}</span>
+            <span className="text-neutral-400 dark:text-neutral-500 discuss:text-[#9CA3AF] text-xs shrink-0">{timeAgo(post.timestamp)}</span>
           </div>
           {isAuthor && (
             <div className="flex items-center gap-0.5 shrink-0">
-              <button data-testid={`post-edit-btn-${post.id}`} onClick={(e) => { e.stopPropagation(); setShowEditModal(true); }} className="p-1.5 hover:bg-[#F5F5F7] dark:hover:bg-[#334155] discuss:hover:bg-[#262626] text-[#94A3B8] discuss:text-[#9CA3AF] hover:text-[#0F172A] dark:hover:text-white discuss:hover:text-[#F5F5F5] transition-colors">
+              <button data-testid={`post-edit-btn-${post.id}`} onClick={(e) => { e.stopPropagation(); setShowEditModal(true); }} className="p-1.5 rounded-[6px] hover:bg-neutral-100 dark:hover:bg-neutral-700 discuss:hover:bg-[#262626] text-neutral-400 discuss:text-[#9CA3AF] hover:text-neutral-900 dark:hover:text-white discuss:hover:text-[#F5F5F5] transition-colors">
                 <Pencil className="w-3.5 h-3.5" />
               </button>
-              <button data-testid={`post-delete-btn-${post.id}`} onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }} className="p-1.5 hover:bg-[#EF4444]/10 text-[#94A3B8] discuss:text-[#9CA3AF] hover:text-[#EF4444] transition-colors">
+              <button data-testid={`post-delete-btn-${post.id}`} onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }} className="p-1.5 rounded-[6px] hover:bg-[#EF4444]/10 text-neutral-400 discuss:text-[#9CA3AF] hover:text-[#EF4444] transition-colors">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -141,9 +141,9 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
           className="cursor-pointer"
         >
           {isProject && post.title && (
-            <h3 data-testid={`post-title-${post.id}`} className="font-bold text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] text-[15px] md:text-[17px] mb-1.5 leading-snug hover:text-[#2563EB] dark:hover:text-[#60A5FA] discuss:hover:text-[#EF4444] transition-colors">{post.title}</h3>
+            <h3 data-testid={`post-title-${post.id}`} className="font-semibold text-neutral-900 dark:text-neutral-50 discuss:text-[#F5F5F5] text-[15px] md:text-[17px] mb-1.5 leading-snug hover:text-[#2563EB] dark:hover:text-[#60A5FA] discuss:hover:text-[#EF4444] transition-colors">{post.title}</h3>
           )}
-          <div data-testid={`post-content-${post.id}`} className="text-[#0F172A] dark:text-[#E2E8F0] discuss:text-[#E5E7EB] text-[13px] md:text-[15px] leading-relaxed">
+          <div data-testid={`post-content-${post.id}`} className="text-neutral-700 dark:text-neutral-200 discuss:text-[#E5E7EB] text-[13px] md:text-[15px] leading-relaxed">
             <ExpandableText text={post.content} maxLines={5}>
               <span className="whitespace-pre-wrap"><LinkifiedText text={post.content} /></span>
             </ExpandableText>
@@ -153,7 +153,7 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
             <div className="flex flex-wrap gap-1.5 mt-3" onClick={(e) => e.stopPropagation()}>
               {hashtags.map((tag) => (
                 <button key={tag} data-testid={`post-hashtag-${tag}`} onClick={(e) => { e.stopPropagation(); onTagClick?.(tag); }}
-                  className="inline-flex items-center gap-0.5 bg-[#F5F5F7] dark:bg-[#0F172A] discuss:bg-[#262626] hover:bg-[#2563EB]/10 discuss:hover:bg-[#333333] px-2.5 py-1 text-xs font-medium text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] hover:text-[#2563EB] discuss:hover:text-[#F5F5F5] transition-colors">
+                  className="inline-flex items-center gap-0.5 bg-neutral-100 dark:bg-neutral-700 discuss:bg-[#262626] hover:bg-[#2563EB]/10 discuss:hover:bg-[#333333] px-2.5 py-1 rounded-[6px] text-xs font-medium text-neutral-600 dark:text-neutral-400 discuss:text-[#9CA3AF] hover:text-[#2563EB] discuss:hover:text-[#F5F5F5] transition-colors">
                   <Hash className="w-3 h-3" />{tag}
                 </button>
               ))}
@@ -164,14 +164,14 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
             <div className="flex flex-wrap gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
               {post.github_link && (
                 <button onClick={(e) => handleExternalLink(post.github_link, e)} data-testid={`post-github-link-${post.id}`}
-                  className="inline-flex items-center gap-1.5 bg-[#0F172A] dark:bg-[#F1F5F9] discuss:bg-[#262626] text-white dark:text-[#0F172A] discuss:text-[#F5F5F5] px-3 py-1.5 text-xs font-medium hover:bg-[#1E293B] dark:hover:bg-[#E2E8F0] discuss:hover:bg-[#333333] transition-colors">
+                  className="inline-flex items-center gap-1.5 bg-neutral-900 dark:bg-neutral-100 discuss:bg-[#262626] text-white dark:text-neutral-900 discuss:text-[#F5F5F5] px-3 py-1.5 rounded-[6px] text-xs font-medium hover:bg-neutral-800 dark:hover:bg-neutral-200 discuss:hover:bg-[#333333] transition-colors">
                   <Github className="w-3.5 h-3.5" /> GitHub
                 </button>
               )}
               {post.preview_link && (
                 <button onClick={(e) => handleExternalLink(post.preview_link, e)} data-testid={`post-preview-link-${post.id}`}
                   data-primary="true"
-                  className="inline-flex items-center gap-1.5 bg-[#2563EB] discuss:bg-[#EF4444] text-white discuss:text-white px-3 py-1.5 text-xs font-medium hover:bg-[#1D4ED8] discuss:hover:bg-[#DC2626] transition-colors">
+                  className="inline-flex items-center gap-1.5 bg-[#2563EB] discuss:bg-[#EF4444] text-white discuss:text-white px-3 py-1.5 rounded-[6px] text-xs font-medium hover:bg-[#1D4ED8] discuss:hover:bg-[#DC2626] shadow-button transition-colors">
                   <ExternalLink className="w-3.5 h-3.5" /> Live Preview
                 </button>
               )}
@@ -181,15 +181,15 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
       </div>
 
       {/* Actions bar */}
-      <div className="flex items-center gap-2 px-3 py-2 border-t border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">
+      <div className="flex items-center gap-2 px-3 py-2 border-t border-neutral-200 dark:border-neutral-700 discuss:border-[#333333]">
         <button 
           data-testid={`post-upvote-btn-${post.id}`} 
           onClick={() => handleVote('up')} 
           disabled={voting}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium transition-all ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-[13px] font-medium transition-all ${
             userVote === 'up' 
               ? 'bg-[#10B981]/10 text-[#10B981] discuss:bg-[#EF4444]/10 discuss:text-[#EF4444] border border-[#10B981]/30 discuss:border-[#EF4444]/30' 
-              : 'text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] hover:bg-[#10B981]/5 hover:text-[#10B981] discuss:hover:bg-[#262626] discuss:hover:text-[#F5F5F5] border border-transparent'
+              : 'text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF] hover:bg-[#10B981]/5 hover:text-[#10B981] discuss:hover:bg-[#262626] discuss:hover:text-[#F5F5F5] border border-transparent'
           }`}
         >
           <ThumbsUp className="w-4 h-4" fill={userVote === 'up' ? 'currentColor' : 'none'} />
@@ -200,26 +200,26 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
           data-testid={`post-downvote-btn-${post.id}`} 
           onClick={() => handleVote('down')} 
           disabled={voting}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium transition-all ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-[13px] font-medium transition-all ${
             userVote === 'down' 
               ? 'bg-[#EF4444]/10 text-[#EF4444] discuss:bg-[#EF4444]/10 discuss:text-[#EF4444] border border-[#EF4444]/30 discuss:border-[#EF4444]/30' 
-              : 'text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] hover:bg-[#EF4444]/5 hover:text-[#EF4444] discuss:hover:bg-[#262626] discuss:hover:text-[#F5F5F5] border border-transparent'
+              : 'text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF] hover:bg-[#EF4444]/5 hover:text-[#EF4444] discuss:hover:bg-[#262626] discuss:hover:text-[#F5F5F5] border border-transparent'
           }`}
         >
           <ThumbsDown className="w-4 h-4" fill={userVote === 'down' ? 'currentColor' : 'none'} />
           <span data-testid={`post-downvote-count-${post.id}`}>{downvoteCount}</span>
         </button>
 
-        <div className="w-px h-4 bg-[#E2E8F0] dark:bg-[#334155] discuss:bg-[#333333] mx-1" />
+        <div className="w-px h-4 bg-neutral-200 dark:bg-neutral-700 discuss:bg-[#333333] mx-1" />
 
         <button data-testid={`post-comments-btn-${post.id}`} onClick={() => setShowComments(!showComments)}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-medium text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] hover:bg-[#F5F5F7] dark:hover:bg-[#334155] discuss:hover:bg-[#262626] hover:text-[#0F172A] dark:hover:text-white discuss:hover:text-[#F5F5F5] transition-colors">
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[6px] text-[13px] font-medium text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF] hover:bg-neutral-100 dark:hover:bg-neutral-700 discuss:hover:bg-[#262626] hover:text-neutral-900 dark:hover:text-white discuss:hover:text-[#F5F5F5] transition-colors">
           <MessageSquare className="w-4 h-4" />
           <span data-testid={`post-comment-count-${post.id}`}>{post.comment_count || 0}</span>
         </button>
 
         <button data-testid={`post-share-btn-${post.id}`} onClick={() => setShowShare(true)}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-medium text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] hover:bg-[#F5F5F7] dark:hover:bg-[#334155] discuss:hover:bg-[#262626] hover:text-[#0F172A] dark:hover:text-white discuss:hover:text-[#F5F5F5] transition-colors">
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[6px] text-[13px] font-medium text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF] hover:bg-neutral-100 dark:hover:bg-neutral-700 discuss:hover:bg-[#262626] hover:text-neutral-900 dark:hover:text-white discuss:hover:text-[#F5F5F5] transition-colors">
           <Share2 className="w-4 h-4" />
           <span className="hidden sm:inline">Share</span>
         </button>
@@ -238,12 +238,12 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
       )}
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent className="dark:bg-[#1E293B] dark:border-[#334155] discuss:bg-[#1a1a1a] discuss:border-[#333333]">
-          <AlertDialogHeader><AlertDialogTitle className="dark:text-[#F1F5F9] discuss:text-[#F5F5F5]">Delete post?</AlertDialogTitle>
-            <AlertDialogDescription className="dark:text-[#94A3B8] discuss:text-[#9CA3AF]">This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+        <AlertDialogContent className="dark:bg-neutral-800 dark:border-neutral-700 discuss:bg-[#1a1a1a] discuss:border-[#333333] rounded-[12px]">
+          <AlertDialogHeader><AlertDialogTitle className="dark:text-neutral-50 discuss:text-[#F5F5F5]">Delete post?</AlertDialogTitle>
+            <AlertDialogDescription className="dark:text-neutral-400 discuss:text-[#9CA3AF]">This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel data-testid={`post-delete-cancel-${post.id}`} className="dark:bg-[#334155] dark:text-[#F1F5F9] dark:border-[#334155] dark:hover:bg-[#475569] discuss:bg-[#262626] discuss:text-[#F5F5F5] discuss:border-[#333333]">Cancel</AlertDialogCancel>
-            <AlertDialogAction data-testid={`post-delete-confirm-${post.id}`} onClick={handleDelete} disabled={deleting} className="bg-[#EF4444] text-white hover:bg-[#DC2626] discuss:bg-[#EF4444] discuss:hover:bg-[#DC2626]">
+            <AlertDialogCancel data-testid={`post-delete-cancel-${post.id}`} className="rounded-[6px] dark:bg-neutral-700 dark:text-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-600 discuss:bg-[#262626] discuss:text-[#F5F5F5] discuss:border-[#333333]">Cancel</AlertDialogCancel>
+            <AlertDialogAction data-testid={`post-delete-confirm-${post.id}`} onClick={handleDelete} disabled={deleting} className="rounded-[6px] bg-[#EF4444] text-white hover:bg-[#DC2626] discuss:bg-[#EF4444] discuss:hover:bg-[#DC2626]">
               {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -35,7 +35,7 @@ export default function Header() {
   const totalNotifications = unreadMessages + pendingRequests;
 
   return (
-    <header className="sticky top-0 z-40 bg-white/80 dark:bg-[#0F172A]/80 discuss:bg-[#121212]/80 backdrop-blur-md border-b border-[#E2E8F0] dark:border-[#1E293B] discuss:border-[#333333]">
+    <header className="sticky top-0 z-40 bg-white/95 dark:bg-neutral-900/95 discuss:bg-[#121212]/95 backdrop-blur-sm border-b border-neutral-200 dark:border-neutral-800 discuss:border-[#333333]">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link to="/" className="flex items-center" data-testid="header-logo">
           <DiscussLogo size="md" />
@@ -45,13 +45,21 @@ export default function Header() {
           {user ? (
             <>
               <Link to="/feed">
-                <Button variant="ghost" data-testid="header-feed-btn" className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] hover:text-[#0F172A] dark:hover:text-white discuss:hover:text-[#F5F5F5] hover:bg-[#F5F5F7] dark:hover:bg-[#1E293B] discuss:hover:bg-[#1a1a1a] rounded-full px-3 sm:px-4 text-[13px] font-medium">
+                <Button 
+                  variant="ghost" 
+                  data-testid="header-feed-btn" 
+                  className="text-neutral-600 dark:text-neutral-400 discuss:text-[#9CA3AF] hover:text-neutral-900 dark:hover:text-white discuss:hover:text-[#F5F5F5] hover:bg-neutral-100 dark:hover:bg-neutral-800 discuss:hover:bg-[#1a1a1a] rounded-[6px] px-3 sm:px-4 text-[13px] font-medium"
+                >
                   Feed
                 </Button>
               </Link>
               <Link to="/chat" className="relative">
-                <Button variant="ghost" data-testid="header-chat-btn" className="w-9 h-9 p-0 rounded-full bg-[#F5F5F7] dark:bg-[#1E293B] discuss:bg-[#1a1a1a] hover:bg-[#E2E8F0] dark:hover:bg-[#334155] discuss:hover:bg-[#262626]">
-                  <MessageCircle className="w-4 h-4 text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF]" />
+                <Button 
+                  variant="ghost" 
+                  data-testid="header-chat-btn" 
+                  className="w-9 h-9 p-0 rounded-[6px] bg-neutral-100 dark:bg-neutral-800 discuss:bg-[#1a1a1a] hover:bg-neutral-200 dark:hover:bg-neutral-700 discuss:hover:bg-[#262626] border border-neutral-200 dark:border-neutral-700 discuss:border-[#333333]"
+                >
+                  <MessageCircle className="w-4 h-4 text-neutral-600 dark:text-neutral-400 discuss:text-[#9CA3AF]" />
                 </Button>
                 {unreadMessages > 0 && (
                   <span className="absolute -top-1 -right-1 bg-[#EF4444] text-white text-[10px] font-bold min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1">
@@ -60,11 +68,15 @@ export default function Header() {
                 )}
               </Link>
               <Link to="/profile" className="relative">
-                <Button variant="ghost" data-testid="header-profile-btn" className="w-9 h-9 p-0 rounded-full bg-[#F5F5F7] dark:bg-[#1E293B] discuss:bg-[#1a1a1a] hover:bg-[#E2E8F0] dark:hover:bg-[#334155] discuss:hover:bg-[#262626]">
+                <Button 
+                  variant="ghost" 
+                  data-testid="header-profile-btn" 
+                  className="w-9 h-9 p-0 rounded-[6px] bg-neutral-100 dark:bg-neutral-800 discuss:bg-[#1a1a1a] hover:bg-neutral-200 dark:hover:bg-neutral-700 discuss:hover:bg-[#262626] border border-neutral-200 dark:border-neutral-700 discuss:border-[#333333] overflow-hidden"
+                >
                   {user.photo_url ? (
-                    <img src={user.photo_url} alt="" className="w-full h-full rounded-full object-cover" />
+                    <img src={user.photo_url} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <User className="w-4 h-4 text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF]" />
+                    <User className="w-4 h-4 text-neutral-600 dark:text-neutral-400 discuss:text-[#9CA3AF]" />
                   )}
                 </Button>
                 {pendingRequests > 0 && (
@@ -77,12 +89,19 @@ export default function Header() {
           ) : isLanding ? (
             <>
               <Link to="/login">
-                <Button variant="ghost" data-testid="header-login-btn" className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] hover:text-[#0F172A] dark:hover:text-white discuss:hover:text-[#F5F5F5] hover:bg-[#F5F5F7] dark:hover:bg-[#1E293B] discuss:hover:bg-[#1a1a1a] rounded-full px-4 text-[13px] font-medium">
+                <Button 
+                  variant="ghost" 
+                  data-testid="header-login-btn" 
+                  className="text-neutral-600 dark:text-neutral-400 discuss:text-[#9CA3AF] hover:text-neutral-900 dark:hover:text-white discuss:hover:text-[#F5F5F5] hover:bg-neutral-100 dark:hover:bg-neutral-800 discuss:hover:bg-[#1a1a1a] rounded-[6px] px-4 text-[13px] font-medium"
+                >
                   Login
                 </Button>
               </Link>
               <Link to="/register">
-                <Button data-testid="header-register-btn" className="bg-[#2563EB] discuss:bg-[#EF4444] text-white hover:bg-[#1D4ED8] discuss:hover:bg-[#DC2626] rounded-full px-5 text-[13px] font-medium shadow-sm">
+                <Button 
+                  data-testid="header-register-btn" 
+                  className="bg-[#2563EB] discuss:bg-[#EF4444] text-white hover:bg-[#1D4ED8] discuss:hover:bg-[#DC2626] rounded-[6px] px-5 text-[13px] font-medium shadow-button hover:shadow-button-hover transition-all"
+                >
                   Register
                 </Button>
               </Link>

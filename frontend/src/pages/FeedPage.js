@@ -208,7 +208,7 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#0F172A]">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 discuss:bg-[#121212]">
       <Header />
       
       {isOffline && (
@@ -221,25 +221,25 @@ export default function FeedPage() {
       <div className="max-w-2xl mx-auto px-4 md:px-8 py-6">
         {/* Header + Create */}
         <div className="flex items-center justify-between mb-4">
-          <h1 data-testid="feed-title" className="font-heading text-xl sm:text-2xl font-bold text-[#0F172A] dark:text-[#F1F5F9]">Feed</h1>
+          <h1 data-testid="feed-title" className="font-heading text-xl sm:text-2xl font-bold text-neutral-900 dark:text-neutral-50 discuss:text-[#F5F5F5]">Feed</h1>
           <Button
             data-testid="create-post-btn"
             onClick={() => setShowCreate(true)}
-            className="bg-[#2563EB] text-white hover:bg-[#1D4ED8] rounded-md px-4 py-2 font-medium shadow-sm"
+            className="bg-[#2563EB] text-white hover:bg-[#1D4ED8] discuss:bg-[#EF4444] discuss:hover:bg-[#DC2626] rounded-[6px] px-4 py-2 font-medium shadow-button hover:shadow-button-hover transition-all"
           >
             <Plus className="w-4 h-4 mr-1.5" /> New Post
           </Button>
         </div>
 
         {/* Tabs */}
-        <div data-testid="feed-tabs" className="flex mb-4 bg-white dark:bg-[#1E293B] rounded-xl p-1 border border-[#E2E8F0] dark:border-[#334155]">
+        <div data-testid="feed-tabs" className="flex mb-4 bg-white dark:bg-neutral-800 discuss:bg-[#1a1a1a] rounded-[12px] p-1 border border-neutral-200 dark:border-neutral-700 discuss:border-[#333333] shadow-card">
           <button
             data-testid="tab-discussion"
             onClick={() => setActiveTab('discussion')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[6px] text-[13px] font-semibold transition-all ${
               activeTab === 'discussion'
-                ? 'bg-[#2563EB] text-white shadow-sm'
-                : 'text-[#6275AF] dark:text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white hover:bg-[#F5F5F7] dark:hover:bg-[#334155]'
+                ? 'bg-[#2563EB] discuss:bg-[#EF4444] text-white shadow-button'
+                : 'text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF] hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-700 discuss:hover:bg-[#262626]'
             }`}
           >
             <MessageSquare className="w-4 h-4" />
@@ -248,10 +248,10 @@ export default function FeedPage() {
           <button
             data-testid="tab-project"
             onClick={() => setActiveTab('project')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[6px] text-[13px] font-semibold transition-all ${
               activeTab === 'project'
-                ? 'bg-[#BC4800] text-white shadow-sm'
-                : 'text-[#6275AF] dark:text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white hover:bg-[#F5F5F7] dark:hover:bg-[#334155]'
+                ? 'bg-[#6275AF] discuss:bg-[#EF4444] text-white shadow-button'
+                : 'text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF] hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-700 discuss:hover:bg-[#262626]'
             }`}
           >
             <FolderGit2 className="w-4 h-4" />
@@ -265,10 +265,10 @@ export default function FeedPage() {
           <div className="flex gap-2 mb-2">
             <button
               onClick={() => { setSearchType('posts'); setUserSearchResults([]); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-xs font-medium transition-all ${
                 searchType === 'posts'
-                  ? 'bg-[#2563EB] text-white'
-                  : 'bg-[#F5F5F7] dark:bg-[#1E293B] discuss:bg-[#1a1a1a] text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] hover:bg-[#E2E8F0] dark:hover:bg-[#334155] discuss:hover:bg-[#262626]'
+                  ? 'bg-[#2563EB] discuss:bg-[#EF4444] text-white'
+                  : 'bg-neutral-100 dark:bg-neutral-800 discuss:bg-[#1a1a1a] text-neutral-600 dark:text-neutral-400 discuss:text-[#9CA3AF] hover:bg-neutral-200 dark:hover:bg-neutral-700 discuss:hover:bg-[#262626]'
               }`}
             >
               <Hash className="w-3 h-3" />
@@ -276,10 +276,10 @@ export default function FeedPage() {
             </button>
             <button
               onClick={() => setSearchType('users')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-xs font-medium transition-all ${
                 searchType === 'users'
-                  ? 'bg-[#2563EB] text-white discuss:bg-[#EF4444]'
-                  : 'bg-[#F5F5F7] dark:bg-[#1E293B] discuss:bg-[#1a1a1a] text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] hover:bg-[#E2E8F0] dark:hover:bg-[#334155] discuss:hover:bg-[#262626]'
+                  ? 'bg-[#2563EB] discuss:bg-[#EF4444] text-white'
+                  : 'bg-neutral-100 dark:bg-neutral-800 discuss:bg-[#1a1a1a] text-neutral-600 dark:text-neutral-400 discuss:text-[#9CA3AF] hover:bg-neutral-200 dark:hover:bg-neutral-700 discuss:hover:bg-[#262626]'
               }`}
             >
               <Users className="w-3 h-3" />
@@ -288,20 +288,20 @@ export default function FeedPage() {
           </div>
           
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 dark:text-neutral-500 discuss:text-[#9CA3AF]" />
             <Input
               data-testid="feed-search-input"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={searchType === 'users' ? 'Search users by username...' : `Search ${activeTab === 'discussion' ? 'discussions' : 'projects'}...`}
-              className="pl-10 pr-10 bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] dark:placeholder:text-[#6275AF] discuss:placeholder:text-[#9CA3AF] focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 rounded-xl text-[13px] md:text-[15px] h-10"
+              className="pl-10 pr-10 bg-white dark:bg-neutral-800 discuss:bg-[#1a1a1a] border-neutral-200 dark:border-neutral-700 discuss:border-[#333333] text-neutral-900 dark:text-neutral-50 discuss:text-[#F5F5F5] placeholder:text-neutral-400 dark:placeholder:text-neutral-500 discuss:placeholder:text-[#9CA3AF] focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 rounded-[6px] text-[13px] md:text-[15px] h-10"
             />
             {searchQuery && (
               <button
                 type="button"
                 data-testid="feed-search-clear"
                 onClick={handleClearSearch}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6275AF] hover:text-[#0F172A] dark:hover:text-white discuss:hover:text-[#F5F5F5]"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-900 dark:hover:text-white discuss:hover:text-[#F5F5F5]"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -314,11 +314,11 @@ export default function FeedPage() {
           <div className="mb-4">
             {searchingUsers ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-5 h-5 animate-spin text-[#6275AF]" />
+                <Loader2 className="w-5 h-5 animate-spin text-[#2563EB] discuss:text-[#EF4444]" />
               </div>
             ) : userSearchResults.length > 0 ? (
               <div className="space-y-2">
-                <p className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-xs mb-2">
+                <p className="text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF] text-xs mb-2">
                   {userSearchResults.length} user{userSearchResults.length !== 1 ? 's' : ''} found
                 </p>
                 {userSearchResults.map((searchUser) => (
@@ -331,9 +331,9 @@ export default function FeedPage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] rounded-xl border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">
-                <Users className="w-8 h-8 text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] mx-auto mb-2" />
-                <p className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-sm">
+              <div className="text-center py-8 bg-white dark:bg-neutral-800 discuss:bg-[#1a1a1a] rounded-[12px] border border-neutral-200 dark:border-neutral-700 discuss:border-[#333333] shadow-card">
+                <Users className="w-8 h-8 text-neutral-400 dark:text-neutral-500 discuss:text-[#9CA3AF] mx-auto mb-2" />
+                <p className="text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF] text-sm">
                   No users found for "{debouncedSearch}"
                 </p>
               </div>
@@ -343,7 +343,7 @@ export default function FeedPage() {
 
         {/* Active search indicator for posts */}
         {searchType === 'posts' && debouncedSearch && (
-          <div data-testid="active-search-badge" className="flex items-center gap-2 mb-4 bg-[#2563EB]/8 dark:bg-[#2563EB]/15 border border-[#2563EB]/15 dark:border-[#2563EB]/30 rounded-lg px-3 py-2">
+          <div data-testid="active-search-badge" className="flex items-center gap-2 mb-4 bg-[#2563EB]/10 dark:bg-[#2563EB]/15 border border-[#2563EB]/20 dark:border-[#2563EB]/30 rounded-[6px] px-3 py-2">
             <Search className="w-3.5 h-3.5 text-[#2563EB]" />
             <span className="text-[#2563EB] text-[13px] font-medium">
               {filteredPosts.length} result{filteredPosts.length !== 1 ? 's' : ''} for "{debouncedSearch}" in {activeTab === 'discussion' ? 'Discussions' : 'Projects'}
@@ -358,8 +358,8 @@ export default function FeedPage() {
         {searchType === 'posts' && trendingTags.length > 0 && !debouncedSearch && (
           <div data-testid="trending-tags" className="mb-5">
             <div className="flex items-center gap-1.5 mb-2">
-              <TrendingUp className="w-3.5 h-3.5 text-[#6275AF] dark:text-[#94A3B8]" />
-              <span className="text-[#6275AF] dark:text-[#94A3B8] text-xs font-semibold uppercase tracking-wider">Trending</span>
+              <TrendingUp className="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF]" />
+              <span className="text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF] text-xs font-semibold uppercase tracking-wider">Trending</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {trendingTags.slice(0, 4).map((t) => (
@@ -367,7 +367,7 @@ export default function FeedPage() {
                   key={t.tag}
                   data-testid={`trending-tag-${t.tag}`}
                   onClick={() => handleTagClick(t.tag)}
-                  className="inline-flex items-center gap-1 bg-white dark:bg-[#1E293B] border border-[#E2E8F0] dark:border-[#334155] hover:border-[#2563EB]/30 hover:bg-[#2563EB]/5 dark:hover:bg-[#2563EB]/10 rounded-full px-2.5 py-1 text-xs font-medium text-[#6275AF] dark:text-[#94A3B8] hover:text-[#2563EB] transition-all"
+                  className="inline-flex items-center gap-1 bg-white dark:bg-neutral-800 discuss:bg-[#1a1a1a] border border-neutral-200 dark:border-neutral-700 discuss:border-[#333333] hover:border-[#2563EB]/30 hover:bg-[#2563EB]/5 dark:hover:bg-[#2563EB]/10 rounded-[6px] px-2.5 py-1 text-xs font-medium text-neutral-600 dark:text-neutral-400 discuss:text-[#9CA3AF] hover:text-[#2563EB] transition-all shadow-card"
                 >
                   <Hash className="w-3 h-3" />
                   {t.tag}
@@ -381,22 +381,23 @@ export default function FeedPage() {
         {/* Posts - only show when not searching users */}
         {searchType === 'posts' && (
           loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-[#6275AF]" />
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="w-6 h-6 animate-spin text-[#2563EB] discuss:text-[#EF4444] mb-2" />
+            <p className="text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF] text-sm">Loading posts...</p>
           </div>
         ) : filteredPosts.length === 0 ? (
           <div data-testid="empty-feed" className="text-center py-20">
-            <div className="w-16 h-16 rounded-full bg-[#F1F5F9] dark:bg-[#1E293B] flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 rounded-[12px] bg-neutral-100 dark:bg-neutral-800 discuss:bg-[#1a1a1a] flex items-center justify-center mx-auto mb-4">
               {activeTab === 'discussion' ? (
-                <MessageSquare className="w-7 h-7 text-[#6275AF] dark:text-[#94A3B8]" />
+                <MessageSquare className="w-7 h-7 text-neutral-400 dark:text-neutral-500 discuss:text-[#9CA3AF]" />
               ) : (
-                <FolderGit2 className="w-7 h-7 text-[#6275AF] dark:text-[#94A3B8]" />
+                <FolderGit2 className="w-7 h-7 text-neutral-400 dark:text-neutral-500 discuss:text-[#9CA3AF]" />
               )}
             </div>
-            <h3 className="text-lg font-semibold text-[#0F172A] dark:text-[#F1F5F9] mb-1">
+            <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50 discuss:text-[#F5F5F5] mb-1">
               {debouncedSearch ? 'No results found' : `No ${activeTab === 'discussion' ? 'discussions' : 'projects'} yet`}
             </h3>
-            <p className="text-[#6275AF] dark:text-[#94A3B8] text-[13px] md:text-[15px]">
+            <p className="text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF] text-[13px] md:text-[15px]">
               {debouncedSearch ? `Try a different search term` : `Be the first to start a ${activeTab === 'discussion' ? 'discussion' : 'project post'}!`}
             </p>
           </div>

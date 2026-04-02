@@ -68,7 +68,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#0F172A] flex flex-col">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 discuss:bg-[#121212] flex flex-col">
       <AdminMessageBanner />
       <div className="flex-1 flex items-center justify-center px-4">
         <div className="w-full max-w-sm">
@@ -80,18 +80,18 @@ export default function LoginPage() {
           </div>
 
           {/* Card */}
-          <div className="bg-white dark:bg-[#1E293B] rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] dark:shadow-none p-6 md:p-8">
+          <div className="bg-white dark:bg-neutral-800 discuss:bg-[#1a1a1a] rounded-[12px] shadow-card p-6 md:p-8 border border-neutral-200 dark:border-neutral-700 discuss:border-[#333333]">
             {error && (
-              <div data-testid="login-error" className="bg-[#EF4444]/8 border border-[#EF4444]/15 rounded-xl p-3 text-[#EF4444] text-[13px] mb-4 flex items-start gap-2">
+              <div data-testid="login-error" className="bg-[#EF4444]/8 border border-[#EF4444]/15 rounded-[6px] p-3 text-[#EF4444] text-[13px] mb-4 flex items-start gap-2">
                 <XCircle className="w-4 h-4 shrink-0 mt-0.5" /><span>{error}</span>
               </div>
             )}
 
             {showForgotDisabled && (
-              <div data-testid="forgot-disabled-message" className="bg-[#F59E0B]/10 border border-[#F59E0B]/20 rounded-xl p-3 text-[#92400E] text-[13px] mb-4 flex items-start gap-2">
+              <div data-testid="forgot-disabled-message" className="bg-[#F59E0B]/10 border border-[#F59E0B]/20 rounded-[6px] p-3 text-[#92400E] dark:text-[#FCD34D] text-[13px] mb-4 flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-[#F59E0B]" />
                 <span>Admin has disabled this feature. Thank you.</span>
-                <button onClick={() => setShowForgotDisabled(false)} className="ml-auto text-[#92400E] hover:text-[#78350F]">
+                <button onClick={() => setShowForgotDisabled(false)} className="ml-auto text-[#92400E] dark:text-[#FCD34D] hover:opacity-80">
                   <XCircle className="w-4 h-4" />
                 </button>
               </div>
@@ -99,19 +99,19 @@ export default function LoginPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="text-[#6275AF] dark:text-[#94A3B8] text-[11px] font-bold uppercase tracking-[0.1em]">Email Address</label>
+                <label className="text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF] text-[11px] font-bold uppercase tracking-[0.1em]">Email Address</label>
                 <Input data-testid="login-email-input" type="email" value={email}
                   onChange={(e) => { setEmail(e.target.value); setError(''); }}
                   placeholder="name@example.com"
-                  className="mt-1.5 bg-[#F5F5F7] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#6275AF] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 rounded-xl h-11" />
+                  className="mt-1.5 bg-neutral-50 dark:bg-neutral-900 discuss:bg-[#262626] border-neutral-200 dark:border-neutral-700 discuss:border-[#333333] text-neutral-900 dark:text-neutral-50 discuss:text-[#F5F5F5] placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:bg-white dark:focus:bg-neutral-800 focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 rounded-[6px] h-11" />
               </div>
               <div>
                 <div className="flex justify-between items-center">
-                  <label className="text-[#6275AF] dark:text-[#94A3B8] text-[11px] font-bold uppercase tracking-[0.1em]">Password</label>
+                  <label className="text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF] text-[11px] font-bold uppercase tracking-[0.1em]">Password</label>
                   <button 
                     type="button"
                     onClick={handleForgotPassword}
-                    className="text-[#2563EB] text-[12px] font-medium hover:underline"
+                    className="text-[#2563EB] discuss:text-[#EF4444] text-[12px] font-medium hover:underline"
                     data-testid="login-forgot-password"
                   >
                     Forgot?
@@ -121,42 +121,42 @@ export default function LoginPage() {
                   <Input data-testid="login-password-input" type={showPw ? 'text' : 'password'} value={password}
                     onChange={(e) => { setPassword(e.target.value); setError(''); }}
                     placeholder="Enter password"
-                    className="bg-[#F5F5F7] dark:bg-[#0F172A] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#6275AF] focus:bg-white dark:focus:bg-[#1E293B] focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 rounded-xl h-11 pr-10" />
-                  <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6275AF] dark:text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white">
+                    className="bg-neutral-50 dark:bg-neutral-900 discuss:bg-[#262626] border-neutral-200 dark:border-neutral-700 discuss:border-[#333333] text-neutral-900 dark:text-neutral-50 discuss:text-[#F5F5F5] placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:bg-white dark:focus:bg-neutral-800 focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 rounded-[6px] h-11 pr-10" />
+                  <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 dark:text-neutral-500 hover:text-neutral-900 dark:hover:text-white">
                     {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
               <Button type="submit" data-testid="login-submit-btn" disabled={loading}
-                className="w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold rounded-full py-3 h-12 text-[15px] shadow-lg shadow-[#2563EB]/20 transition-all">
+                className="w-full bg-[#2563EB] hover:bg-[#1D4ED8] discuss:bg-[#EF4444] discuss:hover:bg-[#DC2626] text-white font-semibold rounded-[6px] py-3 h-12 text-[15px] shadow-button hover:shadow-button-hover transition-all">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Login'}
               </Button>
             </form>
 
             <div className="relative my-5">
-              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#E2E8F0] dark:border-[#334155]" /></div>
-              <div className="relative flex justify-center text-[11px]"><span className="bg-white dark:bg-[#1E293B] px-3 text-[#94A3B8] uppercase tracking-wider">Or continue with</span></div>
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-neutral-200 dark:border-neutral-700 discuss:border-[#333333]" /></div>
+              <div className="relative flex justify-center text-[11px]"><span className="bg-white dark:bg-neutral-800 discuss:bg-[#1a1a1a] px-3 text-neutral-400 uppercase tracking-wider">Or continue with</span></div>
             </div>
 
             <Button type="button" data-testid="login-google-btn" onClick={handleGoogle} disabled={googleLoading}
-              className="w-full bg-[#F5F5F7] dark:bg-[#0F172A] border border-[#E2E8F0] dark:border-[#334155] text-[#0F172A] dark:text-[#F1F5F9] hover:bg-[#E2E8F0] dark:hover:bg-[#334155] rounded-full py-2.5 h-11 font-medium flex items-center justify-center gap-2.5">
+              className="w-full bg-neutral-50 dark:bg-neutral-900 discuss:bg-[#262626] border border-neutral-200 dark:border-neutral-700 discuss:border-[#333333] text-neutral-900 dark:text-neutral-50 discuss:text-[#F5F5F5] hover:bg-neutral-100 dark:hover:bg-neutral-800 discuss:hover:bg-[#333333] rounded-[6px] py-2.5 h-11 font-medium flex items-center justify-center gap-2.5">
               {googleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><GoogleIcon /> Continue with Google</>}
             </Button>
 
-            <p className="text-center text-[#6275AF] dark:text-[#94A3B8] text-[13px] mt-5">
-              New to discuss? <Link to="/register" data-testid="login-to-register-link" className="text-[#2563EB] hover:underline font-semibold">Create account</Link>
+            <p className="text-center text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF] text-[13px] mt-5">
+              New to discuss? <Link to="/register" data-testid="login-to-register-link" className="text-[#2563EB] discuss:text-[#EF4444] hover:underline font-semibold">Create account</Link>
             </p>
           </div>
 
           {/* Footer links */}
           <div className="text-center mt-6 flex items-center justify-center gap-1.5">
-            <Shield className="w-3.5 h-3.5 text-[#94A3B8]" />
-            <span className="text-[#94A3B8] text-[11px] font-semibold uppercase tracking-wider">Secure Authentication</span>
+            <Shield className="w-3.5 h-3.5 text-neutral-400" />
+            <span className="text-neutral-400 text-[11px] font-semibold uppercase tracking-wider">Secure Authentication</span>
           </div>
           <div className="text-center mt-2 flex items-center justify-center">
             <button 
               onClick={() => setShowTerms(true)}
-              className="text-[#94A3B8] text-[11px] hover:text-[#2563EB] hover:underline"
+              className="text-neutral-400 text-[11px] hover:text-[#2563EB] discuss:hover:text-[#EF4444] hover:underline"
               data-testid="login-terms-link"
             >
               Terms and Conditions
@@ -167,9 +167,9 @@ export default function LoginPage() {
 
       {/* Footer */}
       <footer className="py-4 text-center">
-        <p className="text-[#94A3B8] text-[12px]">
+        <p className="text-neutral-400 text-[12px]">
           Developed by{' '}
-          <span className="text-[#BC4800] font-semibold">&lt;Mohammed Maaz A&gt;</span>
+          <span className="text-[#2563EB] discuss:text-[#EF4444] font-semibold">&lt;Mohammed Maaz A&gt;</span>
         </p>
       </footer>
 
