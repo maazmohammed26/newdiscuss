@@ -10,7 +10,7 @@ import DiscussLogo from '@/components/DiscussLogo';
 import ThemeToggle from '@/components/ThemeToggle';
 import { 
   ArrowRight, MessageSquare, FolderGit2, Zap, Linkedin, Users, Shield, Code, Loader2,
-  Lock, Search, Globe, UserCheck, Briefcase, MessageCircle, Clock, Sparkles
+  Lock, Search, Globe, UserCheck, Briefcase, MessageCircle, Clock
 } from 'lucide-react';
 
 const features = [
@@ -83,9 +83,10 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="pt-16 pb-20 px-4 md:px-8">
         <div className="max-w-3xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-[#2563EB]/10 discuss:bg-[#EF4444]/10 text-[#2563EB] discuss:text-[#EF4444] text-xs font-semibold px-4 py-2 rounded-full mb-6">
-            <Sparkles className="w-3.5 h-3.5" />
-            A Developer-First Platform
+          <div className="inline-flex items-center gap-0 text-xs font-semibold px-4 py-2 rounded-full mb-6 bg-[#F5F5F7] dark:bg-[#1E293B] discuss:bg-[#262626] border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">
+            <span className="text-[#EF4444]">&lt;</span>
+            <span className="text-[#2563EB]">A Developer-First Platform</span>
+            <span className="text-[#EF4444]">&gt;</span>
           </div>
           <h1 data-testid="hero-title" className="font-heading text-4xl sm:text-5xl lg:text-[3.5rem] font-bold text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] leading-[1.1] tracking-tight">
             Where deep thought<br />meets <em className="text-[#BC4800] discuss:text-[#EF4444] not-italic font-bold" style={{fontStyle:'italic'}}>beautiful</em> design.
