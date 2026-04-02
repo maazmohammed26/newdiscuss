@@ -347,11 +347,31 @@ export default function ChatConversationPage() {
         </div>
       </div>
 
+      {/* Auto-delete banner - visible to both users */}
+      {autoDeleteEnabled && (
+        <div className="bg-[#F59E0B]/10 border-b border-[#F59E0B]/20 px-4 py-2">
+          <div className="max-w-2xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-2 text-[#92400E] dark:text-[#FCD34D] discuss:text-[#FCD34D]">
+              <Clock className="w-4 h-4" />
+              <span className="text-xs font-medium">
+                Auto-delete enabled • Messages delete after 24 hours
+              </span>
+            </div>
+            <button
+              onClick={() => setShowAutoDeleteConfirm(true)}
+              className="text-[#92400E] dark:text-[#FCD34D] discuss:text-[#FCD34D] text-xs font-semibold hover:underline"
+            >
+              Turn off
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Messages */}
       <div 
         ref={messagesContainerRef}
         className="flex-1 overflow-y-auto px-4 py-4 scrollbar-hide"
-        style={{ maxHeight: 'calc(100vh - 140px)' }}
+        style={{ maxHeight: autoDeleteEnabled ? 'calc(100vh - 176px)' : 'calc(100vh - 140px)' }}
       >
         <div className="max-w-2xl mx-auto space-y-4">
           {Object.entries(groupedMessages).map(([date, dateMessages]) => (

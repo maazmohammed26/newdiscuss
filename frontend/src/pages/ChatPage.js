@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { getChatsWithUserDetails, subscribeToUserChats } from '@/lib/chatsDb';
+import { getUser } from '@/lib/db';
+import { getChatsWithUserDetails, subscribeToUserChats, getUserChats, getChatSettings } from '@/lib/chatsDb';
 import { getFriendsWithDetails, searchFriends } from '@/lib/relationshipsDb';
 import Header from '@/components/Header';
 import VerifiedBadge from '@/components/VerifiedBadge';
@@ -9,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
   ArrowLeft, Search, X, MessageCircle, Users, Loader2, 
-  MessageSquarePlus, Clock 
+  MessageSquarePlus, Clock, Timer
 } from 'lucide-react';
 
 export default function ChatPage() {
@@ -22,18 +23,52 @@ export default function ChatPage() {
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [activeTab, setActiveTab] = useState('chats'); // 'chats' or 'friends'
+  const [chatSettings, setChatSettings] = useState({});
 
-  // Load chats and friends
+  // Load chats and friends with user details inline
   useEffect(() => {
     if (!user?.id) return;
 
     const loadData = async () => {
       try {
-        const [chatsData, friendsData] = await Promise.all([
-          getChatsWithUserDetails(user.id),
-          getFriendsWithDetails(user.id)
-        ]);
-        setChats(chatsData);
+        // Get raw chats first
+        const rawChats = await getUserChats(user.id);
+        
+        // Fetch user details for each chat
+        const chatsWithDetails = await Promise.all(
+          rawChats.map(async (chat) => {
+            try {
+              if (!chat.otherUser) return { ...chat, otherUserDetails: null };
+              
+              const userData = await getUser(chat.otherUser);
+              
+              // Get chat settings for auto-delete indicator
+              const settings = await getChatSettings(chat.chatId);
+              if (settings?.autoDelete) {
+                setChatSettings(prev => ({ ...prev, [chat.chatId]: settings }));
+              }
+              
+              return {
+                ...chat,
+                otherUserDetails: userData ? {
+                  id: chat.otherUser,
+                  username: userData.username || 'Unknown',
+                  email: userData.email || '',
+                  photo_url: userData.photo_url || '',
+                  verified: userData.verified || false
+                } : null
+              };
+            } catch (err) {
+              console.error('Error fetching user:', err);
+              return { ...chat, otherUserDetails: null };
+            }
+          })
+        );
+        
+        setChats(chatsWithDetails);
+        
+        // Load friends
+        const friendsData = await getFriendsWithDetails(user.id);
         setFriends(friendsData);
       } catch (error) {
         console.error('Error loading chat data:', error);
@@ -47,7 +82,27 @@ export default function ChatPage() {
     // Subscribe to real-time chat updates
     const unsubscribe = subscribeToUserChats(user.id, async (updatedChats) => {
       // Fetch user details for updated chats
-      const chatsWithDetails = await getChatsWithUserDetails(user.id);
+      const chatsWithDetails = await Promise.all(
+        updatedChats.map(async (chat) => {
+          try {
+            if (!chat.otherUser) return { ...chat, otherUserDetails: null };
+            
+            const userData = await getUser(chat.otherUser);
+            return {
+              ...chat,
+              otherUserDetails: userData ? {
+                id: chat.otherUser,
+                username: userData.username || 'Unknown',
+                email: userData.email || '',
+                photo_url: userData.photo_url || '',
+                verified: userData.verified || false
+              } : null
+            };
+          } catch {
+            return { ...chat, otherUserDetails: null };
+          }
+        })
+      );
       setChats(chatsWithDetails);
     });
 
@@ -114,6 +169,8 @@ export default function ChatPage() {
     const otherUser = chat.otherUserDetails || {};
     const initials = (otherUser.username || 'U').slice(0, 2).toUpperCase();
     const isBlocked = chat.status === 'blocked';
+    const hasAutoDelete = chatSettings[chat.chatId]?.autoDelete;
+    const hasUnread = chat.unreadCount > 0 && !isBlocked;
 
     return (
       <button
@@ -122,42 +179,53 @@ export default function ChatPage() {
         className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
           isBlocked 
             ? 'bg-[#F5F5F7]/50 dark:bg-[#1E293B]/50 discuss:bg-[#1a1a1a]/50 opacity-60'
-            : 'bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] hover:shadow-md dark:hover:shadow-none'
-        } border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]`}
+            : hasUnread
+              ? 'bg-[#2563EB]/5 dark:bg-[#2563EB]/10 discuss:bg-[#EF4444]/10 border-[#2563EB]/30 dark:border-[#2563EB]/30 discuss:border-[#EF4444]/30'
+              : 'bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] hover:shadow-md dark:hover:shadow-none'
+        } border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333] ${hasUnread ? 'ring-1 ring-[#2563EB]/20 discuss:ring-[#EF4444]/20' : ''}`}
       >
-        {otherUser.photo_url ? (
-          <img
-            src={otherUser.photo_url}
-            alt={otherUser.username}
-            className="w-12 h-12 rounded-full object-cover shrink-0"
-          />
-        ) : (
-          <div className="w-12 h-12 rounded-full bg-[#2563EB] discuss:bg-[#EF4444] flex items-center justify-center shrink-0">
-            <span className="text-white font-bold">{initials}</span>
-          </div>
-        )}
+        {/* Avatar with unread indicator */}
+        <div className="relative shrink-0">
+          {otherUser.photo_url ? (
+            <img
+              src={otherUser.photo_url}
+              alt={otherUser.username}
+              className="w-12 h-12 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-[#2563EB] discuss:bg-[#EF4444] flex items-center justify-center">
+              <span className="text-white font-bold">{initials}</span>
+            </div>
+          )}
+          {hasUnread && (
+            <span className="absolute -top-1 -right-1 bg-[#EF4444] text-white text-[10px] font-bold min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1 shadow-sm">
+              {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
+            </span>
+          )}
+        </div>
         
         <div className="flex-1 min-w-0 text-left">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1 min-w-0">
-              <span className="font-semibold text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] text-sm truncate">
+              <span className={`font-semibold text-sm truncate ${hasUnread ? 'text-[#0F172A] dark:text-white discuss:text-white' : 'text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5]'}`}>
                 @{otherUser.username || 'Unknown'}
               </span>
               {otherUser.verified && <VerifiedBadge size="sm" />}
+              {hasAutoDelete && (
+                <span className="bg-[#F59E0B]/20 text-[#F59E0B] text-[9px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5" title="Auto-delete enabled (24h)">
+                  <Timer className="w-2.5 h-2.5" />
+                  24h
+                </span>
+              )}
             </div>
             <span className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-xs shrink-0">
               {formatTime(chat.lastMessageTime)}
             </span>
           </div>
           <div className="flex items-center justify-between gap-2 mt-0.5">
-            <p className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-xs truncate">
+            <p className={`text-xs truncate ${hasUnread ? 'text-[#0F172A] dark:text-[#E2E8F0] discuss:text-[#E5E7EB] font-medium' : 'text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF]'}`}>
               {isBlocked ? 'Chat unavailable' : (chat.lastMessage || 'No messages yet')}
             </p>
-            {chat.unreadCount > 0 && !isBlocked && (
-              <span className="bg-[#2563EB] discuss:bg-[#EF4444] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-                {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
-              </span>
-            )}
           </div>
         </div>
       </button>
