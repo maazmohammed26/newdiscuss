@@ -5,10 +5,11 @@ import { getUserProfile } from '@/lib/userProfileDb';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import VerifiedBadge from '@/components/VerifiedBadge';
+import FriendRequestButton from '@/components/FriendRequestButton';
 import ImagePreviewModal from '@/components/ImagePreviewModal';
 import { User, FileText, Calendar, ArrowRight, Loader2, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
 
-export default function UserPreviewModal({ open, onClose, userId }) {
+export default function UserPreviewModal({ open, onClose, userId, currentUserId }) {
   const navigate = useNavigate();
   const [userData, setUserData] = useState(null);
   const [profileData, setProfileData] = useState(null);
@@ -170,6 +171,18 @@ export default function UserPreviewModal({ open, onClose, userId }) {
                     <p className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-[10px]">Posts</p>
                   </div>
                 </div>
+
+                {/* Friend Actions - Only show for other users */}
+                {currentUserId && currentUserId !== userId && (
+                  <div className="flex justify-center">
+                    <FriendRequestButton
+                      targetUserId={userId}
+                      targetUsername={userData?.username}
+                      size="sm"
+                      showChat={true}
+                    />
+                  </div>
+                )}
 
                 <Button
                   data-testid="user-preview-view-posts"

@@ -41,6 +41,11 @@ export const generateChatId = (userId1, userId2) => {
  */
 export const getOrCreateChat = async (currentUserId, otherUserId) => {
   try {
+    if (!thirdDatabase) {
+      console.error('Third database not initialized');
+      throw new Error('Database not available');
+    }
+    
     const chatId = generateChatId(currentUserId, otherUserId);
     const chatRef = ref(thirdDatabase, `chats/${chatId}`);
     const snapshot = await get(chatRef);
@@ -54,7 +59,9 @@ export const getOrCreateChat = async (currentUserId, otherUserId) => {
       participants: [currentUserId, otherUserId],
       createdAt: new Date().toISOString(),
       lastMessage: null,
-      status: CHAT_STATUS.ACTIVE
+      status: CHAT_STATUS.ACTIVE,
+      autoDelete: false, // Auto-delete disabled by default
+      autoDeleteHours: 24
     };
     
     await set(chatRef, newChat);
@@ -75,6 +82,8 @@ export const getOrCreateChat = async (currentUserId, otherUserId) => {
  */
 const updateUserChatList = async (userId, chatId, otherUserId, lastMessage) => {
   try {
+    if (!thirdDatabase) return;
+    
     const userChatRef = ref(thirdDatabase, `userChats/${userId}/${chatId}`);
     await set(userChatRef, {
       otherUser: otherUserId,
@@ -96,6 +105,11 @@ const updateUserChatList = async (userId, chatId, otherUserId, lastMessage) => {
  */
 export const sendMessage = async (chatId, senderId, text) => {
   try {
+    if (!thirdDatabase) {
+      console.error('Third database not initialized');
+      throw new Error('Database not available');
+    }
+    
     const timestamp = new Date().toISOString();
     
     // Add message
@@ -105,7 +119,8 @@ export const sendMessage = async (chatId, senderId, text) => {
       text: text.trim(),
       sender: senderId,
       timestamp,
-      read: false
+      read: false,
+      status: 'sent' // Add message status
     };
     await set(newMessageRef, message);
     
@@ -441,6 +456,11 @@ export const getChatsWithUserDetails = async (userId) => {
     const chatsWithDetails = await Promise.all(
       chats.map(async (chat) => {
         try {
+          if (!chat.otherUser) {
+            console.warn('Chat missing otherUser:', chat);
+            return { ...chat, otherUserDetails: null };
+          }
+          
           const userRef = primaryRef(database, `users/${chat.otherUser}`);
           const userSnap = await primaryGet(userRef);
           
@@ -450,16 +470,20 @@ export const getChatsWithUserDetails = async (userId) => {
               ...chat,
               otherUserDetails: {
                 id: chat.otherUser,
-                username: userData.username,
-                email: userData.email,
+                username: userData.username || 'Unknown',
+                email: userData.email || '',
                 photo_url: userData.photo_url || '',
                 verified: userData.verified || false
               }
             };
           }
-          return chat;
-        } catch {
-          return chat;
+          
+          // User not found, return with null details
+          console.warn('User not found for chat:', chat.otherUser);
+          return { ...chat, otherUserDetails: null };
+        } catch (err) {
+          console.error('Error fetching user for chat:', err);
+          return { ...chat, otherUserDetails: null };
         }
       })
     );
@@ -490,3 +514,149 @@ export const searchChats = async (userId, searchQuery) => {
     return [];
   }
 };
+
+/**
+ * Toggle auto-delete setting for a chat
+ * @param {string} chatId - Chat ID
+ * @param {boolean} enabled - Enable or disable auto-delete
+ */
+export const toggleAutoDelete = async (chatId, enabled) => {
+  try {
+    if (!thirdDatabase) {
+      throw new Error('Database not available');
+    }
+    
+    const chatRef = ref(thirdDatabase, `chats/${chatId}`);
+    await update(chatRef, {
+      autoDelete: enabled,
+      autoDeleteHours: 24,
+      autoDeleteEnabledAt: enabled ? new Date().toISOString() : null
+    });
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error toggling auto-delete:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get chat settings including auto-delete status
+ * @param {string} chatId - Chat ID
+ */
+export const getChatSettings = async (chatId) => {
+  try {
+    if (!thirdDatabase) return null;
+    
+    const chatRef = ref(thirdDatabase, `chats/${chatId}`);
+    const snapshot = await get(chatRef);
+    
+    if (!snapshot.exists()) return null;
+    
+    const chat = snapshot.val();
+    return {
+      autoDelete: chat.autoDelete || false,
+      autoDeleteHours: chat.autoDeleteHours || 24,
+      autoDeleteEnabledAt: chat.autoDeleteEnabledAt || null,
+      status: chat.status,
+      blockedBy: chat.blockedBy || null
+    };
+  } catch (error) {
+    console.error('Error getting chat settings:', error);
+    return null;
+  }
+};
+
+/**
+ * Delete old messages (for auto-delete feature)
+ * @param {string} chatId - Chat ID
+ * @param {number} hoursOld - Delete messages older than this many hours
+ */
+export const deleteOldMessages = async (chatId, hoursOld = 24) => {
+  try {
+    if (!thirdDatabase) return { deleted: 0 };
+    
+    const messagesRef = ref(thirdDatabase, `messages/${chatId}`);
+    const snapshot = await get(messagesRef);
+    
+    if (!snapshot.exists()) return { deleted: 0 };
+    
+    const messages = snapshot.val();
+    const cutoffTime = new Date(Date.now() - hoursOld * 60 * 60 * 1000).toISOString();
+    let deletedCount = 0;
+    
+    const deletePromises = Object.entries(messages)
+      .filter(([, msg]) => msg.timestamp < cutoffTime)
+      .map(async ([id]) => {
+        const msgRef = ref(thirdDatabase, `messages/${chatId}/${id}`);
+        await remove(msgRef);
+        deletedCount++;
+      });
+    
+    await Promise.all(deletePromises);
+    
+    return { deleted: deletedCount };
+  } catch (error) {
+    console.error('Error deleting old messages:', error);
+    return { deleted: 0 };
+  }
+};
+
+/**
+ * Block chat with information about who blocked
+ * @param {string} chatId - Chat ID
+ * @param {string} blockedByUserId - User who initiated the block
+ */
+export const blockChatWithInfo = async (chatId, blockedByUserId) => {
+  try {
+    if (!thirdDatabase) return;
+    
+    const chatRef = ref(thirdDatabase, `chats/${chatId}`);
+    await update(chatRef, { 
+      status: CHAT_STATUS.BLOCKED,
+      blockedBy: blockedByUserId,
+      blockedAt: new Date().toISOString()
+    });
+    
+    // Update both users' chat lists
+    const snapshot = await get(chatRef);
+    if (snapshot.exists()) {
+      const chat = snapshot.val();
+      for (const participantId of chat.participants) {
+        const userChatRef = ref(thirdDatabase, `userChats/${participantId}/${chatId}`);
+        await update(userChatRef, { 
+          status: CHAT_STATUS.BLOCKED,
+          blockedBy: blockedByUserId
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error blocking chat:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get who blocked the chat
+ * @param {string} chatId - Chat ID
+ */
+export const getBlockedByInfo = async (chatId) => {
+  try {
+    if (!thirdDatabase) return null;
+    
+    const chatRef = ref(thirdDatabase, `chats/${chatId}`);
+    const snapshot = await get(chatRef);
+    
+    if (!snapshot.exists()) return null;
+    
+    const chat = snapshot.val();
+    return {
+      blockedBy: chat.blockedBy || null,
+      blockedAt: chat.blockedAt || null
+    };
+  } catch (error) {
+    console.error('Error getting blocked info:', error);
+    return null;
+  }
+};
+

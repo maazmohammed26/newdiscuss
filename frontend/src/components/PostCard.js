@@ -234,7 +234,7 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
       )}
 
       {previewUser && (
-        <UserPreviewModal open={true} onClose={() => setPreviewUser(null)} userId={previewUser} />
+        <UserPreviewModal open={true} onClose={() => setPreviewUser(null)} userId={previewUser} currentUserId={currentUser?.id} />
       )}
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>

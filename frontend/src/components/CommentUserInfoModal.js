@@ -3,10 +3,11 @@ import { getUser } from '@/lib/db';
 import { getUserProfile } from '@/lib/userProfileDb';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import VerifiedBadge from '@/components/VerifiedBadge';
+import FriendRequestButton from '@/components/FriendRequestButton';
 import ImagePreviewModal from '@/components/ImagePreviewModal';
 import { Calendar, Loader2, X, ExternalLink, ChevronDown, ChevronUp, User } from 'lucide-react';
 
-export default function CommentUserInfoModal({ open, onClose, userId }) {
+export default function CommentUserInfoModal({ open, onClose, userId, currentUserId }) {
   const [userData, setUserData] = useState(null);
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -162,6 +163,18 @@ export default function CommentUserInfoModal({ open, onClose, userId }) {
                   <p className="text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] text-[12px] font-semibold">{joinDate}</p>
                   <p className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-[10px]">Joined</p>
                 </div>
+
+                {/* Friend Actions - Only show for other users */}
+                {currentUserId && currentUserId !== userId && (
+                  <div className="flex justify-center">
+                    <FriendRequestButton
+                      targetUserId={userId}
+                      targetUsername={userData?.username}
+                      size="sm"
+                      showChat={true}
+                    />
+                  </div>
+                )}
               </div>
             </>
           )}

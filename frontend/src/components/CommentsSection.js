@@ -247,6 +247,7 @@ export default function CommentsSection({ postId, postAuthorId, currentUser }) {
           open={!!userInfoModal}
           onClose={() => setUserInfoModal(null)}
           userId={userInfoModal}
+          currentUserId={currentUser?.id}
         />
       )}
     </div>

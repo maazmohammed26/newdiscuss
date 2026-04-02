@@ -191,30 +191,32 @@ export const cancelFriendRequest = async (currentUserId, toUserId) => {
 
 /**
  * Unfollow/Remove a friend
- * @param {string} currentUserId - Current user's ID
- * @param {string} friendUserId - Friend's user ID
+ * @param {string} currentUserId - Current user's ID (who is unfollowing)
+ * @param {string} friendUserId - Friend's user ID (who is being unfollowed)
  */
 export const unfollowFriend = async (currentUserId, friendUserId) => {
   try {
     const timestamp = new Date().toISOString();
     
-    // Update status to unfollowed for current user
+    // Update status to unfollowed for current user - mark who unfollowed
     const myFriendRef = ref(secondaryDatabase, `relationships/${currentUserId}/friends/${friendUserId}`);
     await update(myFriendRef, {
       status: 'unfollowed',
       chatEnabled: false,
-      unfollowedAt: timestamp
+      unfollowedAt: timestamp,
+      unfollowedBy: currentUserId // Track who initiated the unfollow
     });
     
-    // Update status for the other user too
+    // Update status for the other user too - they were unfollowed by current user
     const theirFriendRef = ref(secondaryDatabase, `relationships/${friendUserId}/friends/${currentUserId}`);
     await update(theirFriendRef, {
       status: 'unfollowed',
       chatEnabled: false,
-      unfollowedAt: timestamp
+      unfollowedAt: timestamp,
+      unfollowedBy: currentUserId // Track who initiated the unfollow
     });
     
-    return { success: true };
+    return { success: true, unfollowedBy: currentUserId };
   } catch (error) {
     console.error('Error unfollowing friend:', error);
     throw error;
@@ -282,6 +284,34 @@ export const getRelationshipStatus = async (currentUserId, otherUserId) => {
   } catch (error) {
     console.error('Error getting relationship status:', error);
     return RELATIONSHIP_STATUS.NONE;
+  }
+};
+
+/**
+ * Get detailed relationship info including who unfollowed
+ * @param {string} currentUserId - Current user's ID
+ * @param {string} otherUserId - Other user's ID
+ */
+export const getRelationshipDetails = async (currentUserId, otherUserId) => {
+  try {
+    const friendRef = ref(secondaryDatabase, `relationships/${currentUserId}/friends/${otherUserId}`);
+    const friendSnap = await get(friendRef);
+    
+    if (!friendSnap.exists()) {
+      return { status: RELATIONSHIP_STATUS.NONE, unfollowedBy: null };
+    }
+    
+    const friendData = friendSnap.val();
+    return {
+      status: friendData.status === 'active' ? RELATIONSHIP_STATUS.FRIENDS : RELATIONSHIP_STATUS.UNFOLLOWED,
+      unfollowedBy: friendData.unfollowedBy || null,
+      unfollowedAt: friendData.unfollowedAt || null,
+      since: friendData.since || null,
+      chatEnabled: friendData.chatEnabled || false
+    };
+  } catch (error) {
+    console.error('Error getting relationship details:', error);
+    return { status: RELATIONSHIP_STATUS.NONE, unfollowedBy: null };
   }
 };
 

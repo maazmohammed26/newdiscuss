@@ -9,7 +9,7 @@ import {
   unfollowFriend,
   RELATIONSHIP_STATUS 
 } from '@/lib/relationshipsDb';
-import { getOrCreateChat, generateChatId, blockChat } from '@/lib/chatsDb';
+import { getOrCreateChat, generateChatId, blockChatWithInfo, unblockChat } from '@/lib/chatsDb';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -85,6 +85,13 @@ export default function FriendRequestButton({
     setActionLoading(true);
     try {
       await acceptFriendRequest(user.id, targetUserId);
+      // Unblock chat if it was blocked (re-friending)
+      const chatId = generateChatId(user.id, targetUserId);
+      try {
+        await unblockChat(chatId);
+      } catch {
+        // Chat might not exist or wasn't blocked
+      }
       setStatus(RELATIONSHIP_STATUS.FRIENDS);
       toast.success(`You and ${targetUsername} are now friends!`);
       onStatusChange?.(RELATIONSHIP_STATUS.FRIENDS);
@@ -113,10 +120,10 @@ export default function FriendRequestButton({
     setActionLoading(true);
     try {
       await unfollowFriend(user.id, targetUserId);
-      // Block the chat
+      // Block the chat with info about who blocked
       const chatId = generateChatId(user.id, targetUserId);
       try {
-        await blockChat(chatId);
+        await blockChatWithInfo(chatId, user.id);
       } catch {
         // Chat might not exist
       }

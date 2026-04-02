@@ -3,13 +3,16 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUser } from '@/lib/db';
 import { getUserProfile } from '@/lib/userProfileDb';
-import { isChatEnabled, getRelationshipStatus, RELATIONSHIP_STATUS } from '@/lib/relationshipsDb';
+import { isChatEnabled, getRelationshipStatus, getRelationshipDetails, RELATIONSHIP_STATUS } from '@/lib/relationshipsDb';
 import { 
   getOrCreateChat, 
   sendMessage, 
   subscribeToMessages, 
   markMessagesAsRead,
   getChatStatus,
+  getChatSettings,
+  toggleAutoDelete,
+  deleteOldMessages,
   generateChatId,
   deleteChat,
   CHAT_STATUS
@@ -19,15 +22,16 @@ import FriendRequestButton from '@/components/FriendRequestButton';
 import VerifiedBadge from '@/components/VerifiedBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { 
-  ArrowLeft, Send, Loader2, Lock, MoreVertical, Trash2, User, AlertTriangle 
+  ArrowLeft, Send, Loader2, Lock, MoreVertical, Trash2, User, AlertTriangle, Clock, Settings 
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -49,7 +53,10 @@ export default function ChatConversationPage() {
   const [chatEnabled, setChatEnabled] = useState(true);
   const [chatStatus, setChatStatus] = useState(CHAT_STATUS.ACTIVE);
   const [relationshipStatus, setRelationshipStatus] = useState(RELATIONSHIP_STATUS.NONE);
+  const [unfollowedBy, setUnfollowedBy] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAutoDeleteConfirm, setShowAutoDeleteConfirm] = useState(false);
+  const [autoDeleteEnabled, setAutoDeleteEnabled] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   // Load other user data and chat
@@ -66,30 +73,40 @@ export default function ChatConversationPage() {
         setOtherUser(userData);
         setOtherUserProfile(profileData);
 
-        // Check relationship and chat status
-        const [canChat, status] = await Promise.all([
+        // Check relationship and chat status with details
+        const [canChat, status, details] = await Promise.all([
           isChatEnabled(user.id, otherUserId),
-          getRelationshipStatus(user.id, otherUserId)
+          getRelationshipStatus(user.id, otherUserId),
+          getRelationshipDetails(user.id, otherUserId)
         ]);
         setChatEnabled(canChat);
         setRelationshipStatus(status);
+        setUnfollowedBy(details.unfollowedBy);
 
         // Get or create chat
         const generatedChatId = generateChatId(user.id, otherUserId);
         setChatId(generatedChatId);
 
-        // Check chat status
-        const currentChatStatus = await getChatStatus(generatedChatId);
+        // Check chat status and settings
+        const [currentChatStatus, chatSettings] = await Promise.all([
+          getChatStatus(generatedChatId),
+          getChatSettings(generatedChatId)
+        ]);
+        
         if (currentChatStatus) {
           setChatStatus(currentChatStatus);
         }
+        
+        if (chatSettings) {
+          setAutoDeleteEnabled(chatSettings.autoDelete || false);
+        }
 
-        // If chat exists, try to get it
-        if (canChat || status === RELATIONSHIP_STATUS.UNFOLLOWED) {
+        // If chat is enabled, try to get/create it
+        if (canChat) {
           try {
             await getOrCreateChat(user.id, otherUserId);
-          } catch {
-            // Chat creation might fail if not friends
+          } catch (err) {
+            console.error('Error creating chat:', err);
           }
         }
       } catch (error) {
@@ -140,12 +157,16 @@ export default function ChatConversationPage() {
     e.preventDefault();
     if (!newMessage.trim() || !chatId || sending || !chatEnabled) return;
 
+    const messageText = newMessage.trim();
+    setNewMessage(''); // Clear immediately for instant feedback
     setSending(true);
+    
     try {
-      await sendMessage(chatId, user.id, newMessage.trim());
-      setNewMessage('');
+      await sendMessage(chatId, user.id, messageText);
       inputRef.current?.focus();
     } catch (error) {
+      console.error('Send message error:', error);
+      setNewMessage(messageText); // Restore message if failed
       toast.error('Failed to send message');
     } finally {
       setSending(false);
@@ -165,6 +186,26 @@ export default function ChatConversationPage() {
     } finally {
       setDeleting(false);
       setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleToggleAutoDelete = async () => {
+    if (!chatId) return;
+    
+    try {
+      await toggleAutoDelete(chatId, !autoDeleteEnabled);
+      setAutoDeleteEnabled(!autoDeleteEnabled);
+      setShowAutoDeleteConfirm(false);
+      
+      if (!autoDeleteEnabled) {
+        toast.success('Auto-delete enabled. Messages will be deleted after 24 hours.');
+        // Run initial cleanup
+        await deleteOldMessages(chatId, 24);
+      } else {
+        toast.success('Auto-delete disabled. Messages will be kept permanently.');
+      }
+    } catch (error) {
+      toast.error('Failed to update settings');
     }
   };
 
@@ -285,6 +326,15 @@ export default function ChatConversationPage() {
                 <User className="w-4 h-4 mr-2" />
                 View Profile
               </DropdownMenuItem>
+              <DropdownMenuSeparator className="dark:bg-[#334155] discuss:bg-[#333333]" />
+              <DropdownMenuItem
+                onClick={() => setShowAutoDeleteConfirm(true)}
+                className="dark:text-[#F1F5F9] discuss:text-[#F5F5F5] dark:focus:bg-[#334155] discuss:focus:bg-[#333333]"
+              >
+                <Clock className="w-4 h-4 mr-2" />
+                {autoDeleteEnabled ? 'Disable Auto-Delete' : 'Enable Auto-Delete (24h)'}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="dark:bg-[#334155] discuss:bg-[#333333]" />
               <DropdownMenuItem
                 onClick={() => setShowDeleteConfirm(true)}
                 className="text-[#EF4444] focus:text-[#EF4444] dark:focus:bg-[#334155] discuss:focus:bg-[#333333]"
@@ -380,13 +430,15 @@ export default function ChatConversationPage() {
                 </p>
                 <p className="text-[#B45309] dark:text-[#FBBF24] discuss:text-[#FBBF24] text-xs mt-0.5">
                   {relationshipStatus === RELATIONSHIP_STATUS.UNFOLLOWED 
-                    ? 'You unfollowed this user. Send a friend request to chat again.'
+                    ? (unfollowedBy === user?.id 
+                        ? 'You unfollowed this user. Send a friend request to chat again.'
+                        : 'This user has unfollowed you.')
                     : 'You need to be friends to send messages.'}
                 </p>
               </div>
               <FriendRequestButton
                 targetUserId={otherUserId}
-                targetUsername={otherUser.username}
+                targetUsername={otherUser?.username}
                 size="sm"
                 showChat={false}
                 onStatusChange={handleStatusChange}
@@ -445,6 +497,38 @@ export default function ChatConversationPage() {
               className="bg-[#EF4444] text-white hover:bg-[#DC2626]"
             >
               {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Delete Chat'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Auto-delete confirmation dialog */}
+      <AlertDialog open={showAutoDeleteConfirm} onOpenChange={setShowAutoDeleteConfirm}>
+        <AlertDialogContent className="dark:bg-[#1E293B] dark:border-[#334155] discuss:bg-[#262626] discuss:border-[#333333]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="dark:text-[#F1F5F9] discuss:text-[#F5F5F5] flex items-center gap-2">
+              <Clock className="w-5 h-5 text-[#F59E0B]" />
+              {autoDeleteEnabled ? 'Disable Auto-Delete?' : 'Enable Auto-Delete?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="dark:text-[#94A3B8] discuss:text-[#9CA3AF]">
+              {autoDeleteEnabled 
+                ? 'Messages will be kept permanently. Do you want to disable auto-delete?'
+                : 'All messages will be automatically deleted after 24 hours. This applies to this chat only. Do you want to continue?'
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="dark:bg-[#334155] dark:text-[#F1F5F9] dark:border-[#334155] discuss:bg-[#333333] discuss:text-[#F5F5F5] discuss:border-[#333333]">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleToggleAutoDelete}
+              className={autoDeleteEnabled 
+                ? "bg-[#10B981] text-white hover:bg-[#059669]"
+                : "bg-[#F59E0B] text-white hover:bg-[#D97706]"
+              }
+            >
+              {autoDeleteEnabled ? 'Disable' : 'Enable Auto-Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
