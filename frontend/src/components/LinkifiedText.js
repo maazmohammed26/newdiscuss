@@ -53,6 +53,7 @@ export default function LinkifiedText({ text, className = '' }) {
   
   const handleLinkClick = (e, href) => {
     e.preventDefault();
+    e.stopPropagation(); // Prevent click from bubbling to parent (post card)
     setPendingUrl(href);
   };
   

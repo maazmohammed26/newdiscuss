@@ -537,3 +537,99 @@ export const searchFriends = async (userId, searchQuery) => {
     return [];
   }
 };
+
+
+/**
+ * Get suggested friends based on mutual connections
+ * @param {string} userId - Current user's ID
+ * @param {number} limit - Maximum number of suggestions (default 10)
+ * @returns {Promise<Array>} Array of suggested users with mutual friend count
+ */
+export const getSuggestedFriends = async (userId, limit = 10) => {
+  try {
+    // Get current user's friends
+    const myFriends = await getFriends(userId);
+    const myFriendIds = new Set(myFriends.map(f => f.id));
+    
+    // Get sent and received requests to exclude
+    const [sentRequests, receivedRequests] = await Promise.all([
+      getSentRequests(userId),
+      getReceivedRequests(userId)
+    ]);
+    const pendingIds = new Set([
+      ...sentRequests.map(r => r.toUserId),
+      ...receivedRequests.map(r => r.fromUserId)
+    ]);
+    
+    // Track potential friends and their mutual connections
+    const suggestionsMap = new Map(); // userId -> { user, mutualCount, mutualFriends }
+    
+    // For each of my friends, get their friends (friends of friends)
+    await Promise.all(
+      myFriends.map(async (friend) => {
+        try {
+          const friendsOfFriend = await getFriendsWithDetails(friend.id);
+          
+          friendsOfFriend.forEach(fof => {
+            // Skip if: it's me, already my friend, or has pending request
+            if (fof.id === userId || myFriendIds.has(fof.id) || pendingIds.has(fof.id)) {
+              return;
+            }
+            
+            // Add or update suggestion
+            if (suggestionsMap.has(fof.id)) {
+              const existing = suggestionsMap.get(fof.id);
+              existing.mutualCount += 1;
+              existing.mutualFriends.push(friend.username);
+            } else {
+              suggestionsMap.set(fof.id, {
+                ...fof,
+                mutualCount: 1,
+                mutualFriends: [friend.username]
+              });
+            }
+          });
+        } catch (e) {
+          // Skip if error getting this friend's friends
+        }
+      })
+    );
+    
+    // Convert to array and sort by mutual count (highest first)
+    let suggestions = Array.from(suggestionsMap.values())
+      .sort((a, b) => b.mutualCount - a.mutualCount)
+      .slice(0, limit);
+    
+    // If we don't have enough suggestions, add some random users
+    if (suggestions.length < limit) {
+      try {
+        const allUsers = await getAllUsersForSearch();
+        const existingIds = new Set([
+          userId,
+          ...myFriendIds,
+          ...pendingIds,
+          ...suggestions.map(s => s.id)
+        ]);
+        
+        const randomUsers = allUsers
+          .filter(u => !existingIds.has(u.id))
+          .slice(0, limit - suggestions.length)
+          .map(u => ({
+            ...u,
+            mutualCount: 0,
+            mutualFriends: []
+          }));
+        
+        suggestions = [...suggestions, ...randomUsers];
+      } catch (e) {
+        // Ignore random users fetch error
+      }
+    }
+    
+    return suggestions;
+  } catch (error) {
+    console.error('Error getting suggested friends:', error);
+    return [];
+  }
+};
+

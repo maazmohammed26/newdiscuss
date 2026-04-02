@@ -22,7 +22,8 @@ import {
   acceptFriendRequest,
   declineFriendRequest,
   cancelFriendRequest,
-  subscribeToReceivedRequests
+  subscribeToReceivedRequests,
+  getSuggestedFriends
 } from '@/lib/relationshipsDb';
 import Header from '@/components/Header';
 import PostCard from '@/components/PostCard';
@@ -104,6 +105,10 @@ export default function ProfilePage() {
   const [searchingFriends, setSearchingFriends] = useState(false);
   const [processingRequest, setProcessingRequest] = useState(null);
   const [requestUserDetails, setRequestUserDetails] = useState({});
+  
+  // Suggested friends
+  const [suggestedFriends, setSuggestedFriends] = useState([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(true);
 
   // Fetch user posts
   useEffect(() => {
@@ -192,6 +197,25 @@ export default function ProfilePage() {
 
     return () => unsubscribe();
   }, [user?.id]);
+
+  // Fetch suggested friends
+  useEffect(() => {
+    if (!user?.id) return;
+    
+    const loadSuggestions = async () => {
+      setLoadingSuggestions(true);
+      try {
+        const suggestions = await getSuggestedFriends(user.id, 6);
+        setSuggestedFriends(suggestions);
+      } catch (error) {
+        console.error('Error loading suggestions:', error);
+      } finally {
+        setLoadingSuggestions(false);
+      }
+    };
+    
+    loadSuggestions();
+  }, [user?.id, friends.length]); // Refresh when friends list changes
 
   // Search for friends
   useEffect(() => {
@@ -940,7 +964,67 @@ export default function ProfilePage() {
                   <p className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-sm">Loading friends list...</p>
                 </div>
               ) : friends.length > 0 ? (
-                <div className="bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] rounded-xl p-4 border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">
+                <div className="space-y-4">
+                  {/* Suggested Friends Section */}
+                  {suggestedFriends.length > 0 && (
+                    <div className="bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] rounded-xl p-4 border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">
+                      <h3 className="text-sm font-semibold text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] mb-3 flex items-center gap-2">
+                        <UserPlus className="w-4 h-4 text-[#2563EB] discuss:text-[#EF4444]" />
+                        Suggested Friends
+                      </h3>
+                      {loadingSuggestions ? (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="w-5 h-5 animate-spin text-[#2563EB] discuss:text-[#EF4444]" />
+                          <span className="ml-2 text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-sm">Finding suggestions...</span>
+                        </div>
+                      ) : (
+                        <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-hide">
+                          {suggestedFriends.map((suggested) => {
+                            const initials = (suggested.username || 'U').slice(0, 2).toUpperCase();
+                            
+                            return (
+                              <div key={suggested.id} className="flex items-center justify-between bg-[#F5F5F7] dark:bg-[#0F172A] discuss:bg-[#262626] p-3 rounded-lg">
+                                <button
+                                  onClick={() => navigate(`/user/${suggested.id}`)}
+                                  className="flex items-center gap-3 flex-1 min-w-0"
+                                >
+                                  {suggested.photo_url ? (
+                                    <img src={suggested.photo_url} alt={suggested.username} className="w-10 h-10 rounded-full object-cover" />
+                                  ) : (
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2563EB] to-[#7C3AED] discuss:from-[#EF4444] discuss:to-[#F59E0B] flex items-center justify-center">
+                                      <span className="text-white text-sm font-bold">{initials}</span>
+                                    </div>
+                                  )}
+                                  <div className="text-left min-w-0">
+                                    <span className="font-semibold text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] text-sm block truncate flex items-center gap-1">
+                                      @{suggested.username}
+                                      {suggested.verified && <VerifiedBadge size="xs" />}
+                                    </span>
+                                    {suggested.mutualCount > 0 && (
+                                      <span className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-xs">
+                                        {suggested.mutualCount} mutual friend{suggested.mutualCount !== 1 ? 's' : ''}
+                                      </span>
+                                    )}
+                                  </div>
+                                </button>
+                                <Button
+                                  onClick={() => navigate(`/user/${suggested.id}`)}
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 px-3 shrink-0 ml-2 border-[#2563EB] discuss:border-[#EF4444] text-[#2563EB] discuss:text-[#EF4444] hover:bg-[#2563EB]/10 discuss:hover:bg-[#EF4444]/10"
+                                >
+                                  <UserPlus className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Your Friends */}
+                  <div className="bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] rounded-xl p-4 border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">
                   <h3 className="text-sm font-semibold text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] mb-3 flex items-center gap-2">
                     <Users className="w-4 h-4 text-[#10B981]" />
                     Your Friends ({friends.length})
@@ -980,14 +1064,70 @@ export default function ProfilePage() {
                       );
                     })}
                   </div>
+                  </div>
                 </div>
               ) : (
-                <div className="text-center py-8 bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] rounded-xl border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">
-                  <Users className="w-10 h-10 text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] mx-auto mb-3" />
-                  <h3 className="text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] font-semibold mb-1">No friends yet</h3>
-                  <p className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-sm">
-                    Search for users above to connect
-                  </p>
+                <div className="space-y-4">
+                  {/* Suggested Friends for users without friends */}
+                  {suggestedFriends.length > 0 && (
+                    <div className="bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] rounded-xl p-4 border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">
+                      <h3 className="text-sm font-semibold text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] mb-3 flex items-center gap-2">
+                        <UserPlus className="w-4 h-4 text-[#2563EB] discuss:text-[#EF4444]" />
+                        People You May Know
+                      </h3>
+                      {loadingSuggestions ? (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="w-5 h-5 animate-spin text-[#2563EB] discuss:text-[#EF4444]" />
+                          <span className="ml-2 text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-sm">Finding people...</span>
+                        </div>
+                      ) : (
+                        <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-hide">
+                          {suggestedFriends.map((suggested) => {
+                            const initials = (suggested.username || 'U').slice(0, 2).toUpperCase();
+                            
+                            return (
+                              <div key={suggested.id} className="flex items-center justify-between bg-[#F5F5F7] dark:bg-[#0F172A] discuss:bg-[#262626] p-3 rounded-lg">
+                                <button
+                                  onClick={() => navigate(`/user/${suggested.id}`)}
+                                  className="flex items-center gap-3 flex-1 min-w-0"
+                                >
+                                  {suggested.photo_url ? (
+                                    <img src={suggested.photo_url} alt={suggested.username} className="w-10 h-10 rounded-full object-cover" />
+                                  ) : (
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2563EB] to-[#7C3AED] discuss:from-[#EF4444] discuss:to-[#F59E0B] flex items-center justify-center">
+                                      <span className="text-white text-sm font-bold">{initials}</span>
+                                    </div>
+                                  )}
+                                  <div className="text-left min-w-0">
+                                    <span className="font-semibold text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] text-sm block truncate flex items-center gap-1">
+                                      @{suggested.username}
+                                      {suggested.verified && <VerifiedBadge size="xs" />}
+                                    </span>
+                                  </div>
+                                </button>
+                                <Button
+                                  onClick={() => navigate(`/user/${suggested.id}`)}
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 px-3 shrink-0 ml-2 border-[#2563EB] discuss:border-[#EF4444] text-[#2563EB] discuss:text-[#EF4444] hover:bg-[#2563EB]/10 discuss:hover:bg-[#EF4444]/10"
+                                >
+                                  <UserPlus className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  <div className="text-center py-8 bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] rounded-xl border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">
+                    <Users className="w-10 h-10 text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] mx-auto mb-3" />
+                    <h3 className="text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] font-semibold mb-1">No friends yet</h3>
+                    <p className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-sm">
+                      Search for users above to connect
+                    </p>
+                  </div>
                 </div>
               )}
             </div>

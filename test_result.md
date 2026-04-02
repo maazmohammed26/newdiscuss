@@ -420,6 +420,30 @@ frontend:
         agent: "main"
         comment: "Replaced old favicon with new Discuss logo. Updated manifest.json icons"
 
+  - task: "Suggested Friends Feature"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/lib/relationshipsDb.js, ProfilePage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added getSuggestedFriends based on mutual connections. Shows in Friends section with mutual count"
+
+  - task: "Post Link Click Fix"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/components/LinkifiedText.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Fixed: Link in post now shows confirmation and opens external link. Post content click opens post page"
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
