@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getPosts, getTrendingHashtags, subscribeToPostsRealtime } from '@/lib/db';
+import { searchUsers } from '@/lib/relationshipsDb';
 import Header from '@/components/Header';
 import PostCard from '@/components/PostCard';
 import CreatePostModal from '@/components/CreatePostModal';
 import LoadingScreen from '@/components/LoadingScreen';
+import UserSearchResult from '@/components/UserSearchResult';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, MessageSquare, FolderGit2, WifiOff, Loader2, Search, X, Hash, TrendingUp } from 'lucide-react';
+import { Plus, MessageSquare, FolderGit2, WifiOff, Loader2, Search, X, Hash, TrendingUp, Users } from 'lucide-react';
 
 const MemoPostCard = memo(PostCard);
 
@@ -22,6 +24,9 @@ export default function FeedPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [trendingTags, setTrendingTags] = useState([]);
   const [activeTab, setActiveTab] = useState('discussion');
+  const [searchType, setSearchType] = useState('posts'); // 'posts' or 'users'
+  const [userSearchResults, setUserSearchResults] = useState([]);
+  const [searchingUsers, setSearchingUsers] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setPageLoading(false), 1200);
@@ -33,6 +38,28 @@ export default function FeedPage() {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 250);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // Search users when search type is 'users'
+  useEffect(() => {
+    if (searchType !== 'users' || !debouncedSearch.trim() || !user?.id) {
+      setUserSearchResults([]);
+      return;
+    }
+
+    const searchForUsers = async () => {
+      setSearchingUsers(true);
+      try {
+        const results = await searchUsers(debouncedSearch, user.id);
+        setUserSearchResults(results);
+      } catch (error) {
+        console.error('User search error:', error);
+      } finally {
+        setSearchingUsers(false);
+      }
+    };
+
+    searchForUsers();
+  }, [debouncedSearch, searchType, user?.id]);
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -96,6 +123,7 @@ export default function FeedPage() {
   const handleClearSearch = () => {
     setSearchQuery('');
     setDebouncedSearch('');
+    setUserSearchResults([]);
   };
 
   const handleTagClick = (tag) => {
@@ -181,21 +209,47 @@ export default function FeedPage() {
 
         {/* Search bar */}
         <div className="mb-4">
+          {/* Search type toggle */}
+          <div className="flex gap-2 mb-2">
+            <button
+              onClick={() => { setSearchType('posts'); setUserSearchResults([]); }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                searchType === 'posts'
+                  ? 'bg-[#2563EB] text-white'
+                  : 'bg-[#F5F5F7] dark:bg-[#1E293B] discuss:bg-[#1a1a1a] text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] hover:bg-[#E2E8F0] dark:hover:bg-[#334155] discuss:hover:bg-[#262626]'
+              }`}
+            >
+              <Hash className="w-3 h-3" />
+              Posts
+            </button>
+            <button
+              onClick={() => setSearchType('users')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                searchType === 'users'
+                  ? 'bg-[#2563EB] text-white discuss:bg-[#EF4444]'
+                  : 'bg-[#F5F5F7] dark:bg-[#1E293B] discuss:bg-[#1a1a1a] text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] hover:bg-[#E2E8F0] dark:hover:bg-[#334155] discuss:hover:bg-[#262626]'
+              }`}
+            >
+              <Users className="w-3 h-3" />
+              Users
+            </button>
+          </div>
+          
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6275AF] dark:text-[#94A3B8]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF]" />
             <Input
               data-testid="feed-search-input"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={`Search ${activeTab === 'discussion' ? 'discussions' : 'projects'}...`}
-              className="pl-10 pr-10 bg-white dark:bg-[#1E293B] border-[#E2E8F0] dark:border-[#334155] dark:text-[#F1F5F9] dark:placeholder:text-[#6275AF] focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 rounded-xl text-[13px] md:text-[15px] h-10"
+              placeholder={searchType === 'users' ? 'Search users by username...' : `Search ${activeTab === 'discussion' ? 'discussions' : 'projects'}...`}
+              className="pl-10 pr-10 bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] dark:placeholder:text-[#6275AF] discuss:placeholder:text-[#9CA3AF] focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 rounded-xl text-[13px] md:text-[15px] h-10"
             />
             {searchQuery && (
               <button
                 type="button"
                 data-testid="feed-search-clear"
                 onClick={handleClearSearch}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6275AF] hover:text-[#0F172A] dark:hover:text-white"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6275AF] hover:text-[#0F172A] dark:hover:text-white discuss:hover:text-[#F5F5F5]"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -203,8 +257,40 @@ export default function FeedPage() {
           </div>
         </div>
 
-        {/* Active search indicator */}
-        {debouncedSearch && (
+        {/* User Search Results */}
+        {searchType === 'users' && debouncedSearch && (
+          <div className="mb-4">
+            {searchingUsers ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-5 h-5 animate-spin text-[#6275AF]" />
+              </div>
+            ) : userSearchResults.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-xs mb-2">
+                  {userSearchResults.length} user{userSearchResults.length !== 1 ? 's' : ''} found
+                </p>
+                {userSearchResults.map((searchUser) => (
+                  <UserSearchResult
+                    key={searchUser.id}
+                    user={searchUser}
+                    currentUserId={user?.id}
+                    onClose={() => {}}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] rounded-xl border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">
+                <Users className="w-8 h-8 text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] mx-auto mb-2" />
+                <p className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-sm">
+                  No users found for "{debouncedSearch}"
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Active search indicator for posts */}
+        {searchType === 'posts' && debouncedSearch && (
           <div data-testid="active-search-badge" className="flex items-center gap-2 mb-4 bg-[#2563EB]/8 dark:bg-[#2563EB]/15 border border-[#2563EB]/15 dark:border-[#2563EB]/30 rounded-lg px-3 py-2">
             <Search className="w-3.5 h-3.5 text-[#2563EB]" />
             <span className="text-[#2563EB] text-[13px] font-medium">
@@ -216,8 +302,8 @@ export default function FeedPage() {
           </div>
         )}
 
-        {/* Trending hashtags */}
-        {trendingTags.length > 0 && !debouncedSearch && (
+        {/* Trending hashtags - only show when not searching users */}
+        {searchType === 'posts' && trendingTags.length > 0 && !debouncedSearch && (
           <div data-testid="trending-tags" className="mb-5">
             <div className="flex items-center gap-1.5 mb-2">
               <TrendingUp className="w-3.5 h-3.5 text-[#6275AF] dark:text-[#94A3B8]" />
@@ -240,8 +326,9 @@ export default function FeedPage() {
           </div>
         )}
 
-        {/* Posts */}
-        {loading ? (
+        {/* Posts - only show when not searching users */}
+        {searchType === 'posts' && (
+          loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 animate-spin text-[#6275AF]" />
           </div>
@@ -275,6 +362,7 @@ export default function FeedPage() {
               />
             ))}
           </div>
+        )
         )}
       </div>
 

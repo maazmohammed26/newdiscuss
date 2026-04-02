@@ -6,6 +6,7 @@ import { getUserProfile } from '@/lib/userProfileDb';
 import Header from '@/components/Header';
 import PostCard from '@/components/PostCard';
 import VerifiedBadge from '@/components/VerifiedBadge';
+import FriendRequestButton from '@/components/FriendRequestButton';
 import ImagePreviewModal from '@/components/ImagePreviewModal';
 import { ArrowLeft, User, FileText, Calendar, Loader2, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -125,6 +126,18 @@ export default function UserPostsPage() {
                       <FileText className="w-3.5 h-3.5" /> {posts.length} posts
                     </span>
                   </div>
+
+                  {/* Friend Request Button - Show if not viewing own profile */}
+                  {currentUser && currentUser.id !== userId && (
+                    <div className="mt-3">
+                      <FriendRequestButton
+                        targetUserId={userId}
+                        targetUsername={userData.username}
+                        size="sm"
+                        showChat={true}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { getPosts } from '@/lib/db';
+import { getPosts, getUser } from '@/lib/db';
 import { 
   getUserProfile, 
   updateFullName, 
@@ -14,6 +14,16 @@ import {
   BIO_CHAR_LIMIT,
   MAX_SOCIAL_LINKS
 } from '@/lib/userProfileDb';
+import {
+  getReceivedRequests,
+  getSentRequests,
+  getFriendsWithDetails,
+  searchUsers,
+  acceptFriendRequest,
+  declineFriendRequest,
+  cancelFriendRequest,
+  subscribeToReceivedRequests
+} from '@/lib/relationshipsDb';
 import Header from '@/components/Header';
 import PostCard from '@/components/PostCard';
 import ThemeSelector from '@/components/ThemeSelector';
@@ -21,6 +31,7 @@ import VerifiedBadge from '@/components/VerifiedBadge';
 import VerificationRequestModal from '@/components/VerificationRequestModal';
 import UserAdminMessage from '@/components/UserAdminMessage';
 import ImagePreviewModal from '@/components/ImagePreviewModal';
+import UserSearchResult from '@/components/UserSearchResult';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -34,7 +45,7 @@ import {
 import { 
   FileText, LogOut, Loader2, ChevronDown, ChevronUp, 
   Calendar, Filter, ShieldCheck, User, Pencil, Trash2, Plus, Link2, X, Check, ExternalLink,
-  Info, Mail, Image as ImageIcon
+  Info, Mail, Image as ImageIcon, Users, UserPlus, Search, Clock, MessageCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -80,6 +91,18 @@ export default function ProfilePage() {
   // Check if max links reached
   const maxLinksReached = (profileData?.socialLinks?.length || 0) >= MAX_SOCIAL_LINKS;
 
+  // Friend system states
+  const [showFriends, setShowFriends] = useState(false);
+  const [friends, setFriends] = useState([]);
+  const [receivedRequests, setReceivedRequests] = useState([]);
+  const [sentRequests, setSentRequests] = useState([]);
+  const [loadingFriends, setLoadingFriends] = useState(true);
+  const [friendSearchQuery, setFriendSearchQuery] = useState('');
+  const [friendSearchResults, setFriendSearchResults] = useState([]);
+  const [searchingFriends, setSearchingFriends] = useState(false);
+  const [processingRequest, setProcessingRequest] = useState(null);
+  const [requestUserDetails, setRequestUserDetails] = useState({});
+
   // Fetch user posts
   useEffect(() => {
     if (user?.id) {
@@ -103,6 +126,92 @@ export default function ProfilePage() {
         .catch(() => setLoadingProfile(false));
     }
   }, [user?.id]);
+
+  // Fetch friends and requests
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const loadFriendsData = async () => {
+      setLoadingFriends(true);
+      try {
+        const [friendsData, received, sent] = await Promise.all([
+          getFriendsWithDetails(user.id),
+          getReceivedRequests(user.id),
+          getSentRequests(user.id)
+        ]);
+        setFriends(friendsData);
+        setReceivedRequests(received);
+        setSentRequests(sent);
+
+        // Load user details for requests
+        const userIds = [...received.map(r => r.fromUserId), ...sent.map(r => r.toUserId)];
+        const uniqueUserIds = [...new Set(userIds)];
+        const details = {};
+        await Promise.all(
+          uniqueUserIds.map(async (uid) => {
+            try {
+              const userData = await getUser(uid);
+              if (userData) {
+                details[uid] = userData;
+              }
+            } catch {}
+          })
+        );
+        setRequestUserDetails(details);
+      } catch (error) {
+        console.error('Error loading friends data:', error);
+      } finally {
+        setLoadingFriends(false);
+      }
+    };
+
+    loadFriendsData();
+
+    // Subscribe to received requests for real-time updates
+    const unsubscribe = subscribeToReceivedRequests(user.id, async (requests) => {
+      setReceivedRequests(requests);
+      // Load details for new requests
+      const newUserIds = requests.map(r => r.fromUserId).filter(id => !requestUserDetails[id]);
+      if (newUserIds.length > 0) {
+        const newDetails = { ...requestUserDetails };
+        await Promise.all(
+          newUserIds.map(async (uid) => {
+            try {
+              const userData = await getUser(uid);
+              if (userData) {
+                newDetails[uid] = userData;
+              }
+            } catch {}
+          })
+        );
+        setRequestUserDetails(newDetails);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user?.id]);
+
+  // Search for friends
+  useEffect(() => {
+    if (!friendSearchQuery.trim() || !user?.id) {
+      setFriendSearchResults([]);
+      return;
+    }
+
+    const searchTimer = setTimeout(async () => {
+      setSearchingFriends(true);
+      try {
+        const results = await searchUsers(friendSearchQuery, user.id);
+        setFriendSearchResults(results);
+      } catch (error) {
+        console.error('Friend search error:', error);
+      } finally {
+        setSearchingFriends(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(searchTimer);
+  }, [friendSearchQuery, user?.id]);
 
   const availableYears = useMemo(() => {
     const years = new Set();
@@ -144,6 +253,49 @@ export default function ProfilePage() {
   const handleVoteChanged = (postId, voteData) => setUserPosts(prev =>
     prev.map(p => p.id === postId ? { ...p, upvote_count: voteData.upvote_count, downvote_count: voteData.downvote_count, votes: voteData.votes } : p)
   );
+
+  // Friend request handlers
+  const handleAcceptRequest = async (fromUserId) => {
+    setProcessingRequest(fromUserId);
+    try {
+      await acceptFriendRequest(user.id, fromUserId);
+      setReceivedRequests(prev => prev.filter(r => r.fromUserId !== fromUserId));
+      // Refresh friends list
+      const friendsData = await getFriendsWithDetails(user.id);
+      setFriends(friendsData);
+      toast.success('Friend request accepted!');
+    } catch (error) {
+      toast.error('Failed to accept request');
+    } finally {
+      setProcessingRequest(null);
+    }
+  };
+
+  const handleDeclineRequest = async (fromUserId) => {
+    setProcessingRequest(fromUserId);
+    try {
+      await declineFriendRequest(user.id, fromUserId);
+      setReceivedRequests(prev => prev.filter(r => r.fromUserId !== fromUserId));
+      toast.success('Friend request declined');
+    } catch (error) {
+      toast.error('Failed to decline request');
+    } finally {
+      setProcessingRequest(null);
+    }
+  };
+
+  const handleCancelRequest = async (toUserId) => {
+    setProcessingRequest(toUserId);
+    try {
+      await cancelFriendRequest(user.id, toUserId);
+      setSentRequests(prev => prev.filter(r => r.toUserId !== toUserId));
+      toast.success('Friend request cancelled');
+    } catch (error) {
+      toast.error('Failed to cancel request');
+    } finally {
+      setProcessingRequest(null);
+    }
+  };
 
   // Full Name handlers
   const handleSaveFullName = async () => {
@@ -587,6 +739,249 @@ export default function ProfilePage() {
           </Button>
         </div>
 
+        {/* ==================== FRIENDS SECTION ==================== */}
+        <div className="mt-6">
+          <button
+            onClick={() => setShowFriends(!showFriends)}
+            className="w-full flex items-center justify-between bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333] px-5 py-4 hover:shadow-md dark:hover:shadow-none transition-all rounded-xl"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-[#10B981]/10 discuss:bg-[#10B981]/10 flex items-center justify-center rounded-lg relative">
+                <Users className="w-4 h-4 text-[#10B981]" />
+                {receivedRequests.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-[#F59E0B] text-white text-[10px] font-bold min-w-[16px] h-[16px] flex items-center justify-center rounded-full px-1">
+                    {receivedRequests.length}
+                  </span>
+                )}
+              </div>
+              <div className="text-left">
+                <h2 className="text-[15px] font-bold text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5]">Friends</h2>
+                <p className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-xs">
+                  {friends.length} friend{friends.length !== 1 ? 's' : ''}
+                  {receivedRequests.length > 0 && ` • ${receivedRequests.length} pending`}
+                </p>
+              </div>
+            </div>
+            {showFriends ? <ChevronUp className="w-5 h-5 text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF]" /> : <ChevronDown className="w-5 h-5 text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF]" />}
+          </button>
+
+          {showFriends && (
+            <div className="mt-4 space-y-4">
+              {/* Received Friend Requests */}
+              {receivedRequests.length > 0 && (
+                <div className="bg-[#F59E0B]/10 border border-[#F59E0B]/20 rounded-xl p-4">
+                  <h3 className="text-sm font-semibold text-[#92400E] dark:text-[#FCD34D] discuss:text-[#FCD34D] mb-3 flex items-center gap-2">
+                    <UserPlus className="w-4 h-4" />
+                    Friend Requests ({receivedRequests.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {receivedRequests.map((request) => {
+                      const reqUser = requestUserDetails[request.fromUserId];
+                      const initials = (reqUser?.username || 'U').slice(0, 2).toUpperCase();
+                      
+                      return (
+                        <div key={request.fromUserId} className="flex items-center justify-between bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] p-3 rounded-lg border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">
+                          <button
+                            onClick={() => navigate(`/user/${request.fromUserId}`)}
+                            className="flex items-center gap-3 flex-1 min-w-0"
+                          >
+                            {reqUser?.photo_url ? (
+                              <img src={reqUser.photo_url} alt={reqUser.username} className="w-10 h-10 rounded-full object-cover" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-[#2563EB] discuss:bg-[#EF4444] flex items-center justify-center">
+                                <span className="text-white text-sm font-bold">{initials}</span>
+                              </div>
+                            )}
+                            <div className="text-left min-w-0">
+                              <span className="font-semibold text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] text-sm block truncate">
+                                @{reqUser?.username || 'Unknown'}
+                              </span>
+                              <span className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-xs">
+                                {new Date(request.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </button>
+                          <div className="flex gap-2 shrink-0 ml-2">
+                            <Button
+                              onClick={() => handleAcceptRequest(request.fromUserId)}
+                              disabled={processingRequest === request.fromUserId}
+                              size="sm"
+                              className="bg-[#10B981] hover:bg-[#059669] text-white h-8 px-3"
+                            >
+                              {processingRequest === request.fromUserId ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                            </Button>
+                            <Button
+                              onClick={() => handleDeclineRequest(request.fromUserId)}
+                              disabled={processingRequest === request.fromUserId}
+                              variant="outline"
+                              size="sm"
+                              className="border-[#EF4444] text-[#EF4444] hover:bg-[#EF4444]/10 h-8 px-3"
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Sent Requests */}
+              {sentRequests.length > 0 && (
+                <div className="bg-[#F5F5F7] dark:bg-[#0F172A] discuss:bg-[#262626] rounded-xl p-4 border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">
+                  <h3 className="text-sm font-semibold text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] mb-3 flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Sent Requests ({sentRequests.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {sentRequests.map((request) => {
+                      const reqUser = requestUserDetails[request.toUserId];
+                      const initials = (reqUser?.username || 'U').slice(0, 2).toUpperCase();
+                      
+                      return (
+                        <div key={request.toUserId} className="flex items-center justify-between bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] p-3 rounded-lg border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">
+                          <button
+                            onClick={() => navigate(`/user/${request.toUserId}`)}
+                            className="flex items-center gap-3 flex-1 min-w-0"
+                          >
+                            {reqUser?.photo_url ? (
+                              <img src={reqUser.photo_url} alt={reqUser.username} className="w-10 h-10 rounded-full object-cover" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-[#2563EB] discuss:bg-[#EF4444] flex items-center justify-center">
+                                <span className="text-white text-sm font-bold">{initials}</span>
+                              </div>
+                            )}
+                            <div className="text-left min-w-0">
+                              <span className="font-semibold text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] text-sm block truncate">
+                                @{reqUser?.username || 'Unknown'}
+                              </span>
+                              <span className="text-[#F59E0B] text-xs">Pending</span>
+                            </div>
+                          </button>
+                          <Button
+                            onClick={() => handleCancelRequest(request.toUserId)}
+                            disabled={processingRequest === request.toUserId}
+                            variant="outline"
+                            size="sm"
+                            className="border-[#6275AF] text-[#6275AF] hover:bg-[#6275AF]/10 h-8 px-3 shrink-0 ml-2"
+                          >
+                            {processingRequest === request.toUserId ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Cancel'}
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Find Friends Search */}
+              <div className="bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] rounded-xl p-4 border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">
+                <h3 className="text-sm font-semibold text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] mb-3 flex items-center gap-2">
+                  <Search className="w-4 h-4 text-[#2563EB] discuss:text-[#EF4444]" />
+                  Find Friends
+                </h3>
+                <div className="relative mb-3">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF]" />
+                  <Input
+                    value={friendSearchQuery}
+                    onChange={(e) => setFriendSearchQuery(e.target.value)}
+                    placeholder="Search users by username..."
+                    className="pl-10 bg-[#F5F5F7] dark:bg-[#0F172A] discuss:bg-[#262626] border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333] text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] placeholder:text-[#6275AF] dark:placeholder:text-[#94A3B8] discuss:placeholder:text-[#9CA3AF] text-sm"
+                  />
+                  {friendSearchQuery && (
+                    <button
+                      onClick={() => setFriendSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6275AF] hover:text-[#0F172A] dark:hover:text-white discuss:hover:text-[#F5F5F5]"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                
+                {searchingFriends ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-[#6275AF]" />
+                  </div>
+                ) : friendSearchResults.length > 0 ? (
+                  <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-hide">
+                    {friendSearchResults.map((searchUser) => (
+                      <UserSearchResult
+                        key={searchUser.id}
+                        user={searchUser}
+                        currentUserId={user?.id}
+                        onClose={() => setFriendSearchQuery('')}
+                      />
+                    ))}
+                  </div>
+                ) : friendSearchQuery && !searchingFriends ? (
+                  <p className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-sm text-center py-4">
+                    No users found
+                  </p>
+                ) : null}
+              </div>
+
+              {/* Friends List */}
+              {loadingFriends ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-5 h-5 animate-spin text-[#6275AF]" />
+                </div>
+              ) : friends.length > 0 ? (
+                <div className="bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] rounded-xl p-4 border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">
+                  <h3 className="text-sm font-semibold text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] mb-3 flex items-center gap-2">
+                    <Users className="w-4 h-4 text-[#10B981]" />
+                    Your Friends ({friends.length})
+                  </h3>
+                  <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-hide">
+                    {friends.map((friend) => {
+                      const initials = (friend.username || 'U').slice(0, 2).toUpperCase();
+                      
+                      return (
+                        <div key={friend.id} className="flex items-center justify-between bg-[#F5F5F7] dark:bg-[#0F172A] discuss:bg-[#262626] p-3 rounded-lg">
+                          <button
+                            onClick={() => navigate(`/user/${friend.id}`)}
+                            className="flex items-center gap-3 flex-1 min-w-0"
+                          >
+                            {friend.photo_url ? (
+                              <img src={friend.photo_url} alt={friend.username} className="w-10 h-10 rounded-full object-cover" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-[#2563EB] discuss:bg-[#EF4444] flex items-center justify-center">
+                                <span className="text-white text-sm font-bold">{initials}</span>
+                              </div>
+                            )}
+                            <div className="text-left min-w-0">
+                              <span className="font-semibold text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] text-sm block truncate">
+                                @{friend.username}
+                              </span>
+                              {friend.verified && <VerifiedBadge size="xs" />}
+                            </div>
+                          </button>
+                          <Button
+                            onClick={() => navigate(`/chat/${friend.id}`)}
+                            size="sm"
+                            className="bg-[#2563EB] discuss:bg-[#EF4444] hover:bg-[#1D4ED8] discuss:hover:bg-[#DC2626] text-white h-8 px-3 shrink-0 ml-2"
+                          >
+                            <MessageCircle className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] rounded-xl border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">
+                  <Users className="w-10 h-10 text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] mx-auto mb-3" />
+                  <h3 className="text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] font-semibold mb-1">No friends yet</h3>
+                  <p className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-sm">
+                    Search for users above to connect
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        {/* ==================== END FRIENDS SECTION ==================== */}
+
         {/* Your Posts Section */}
         <div className="mt-6">
           <button
@@ -771,6 +1166,16 @@ export default function ProfilePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <style jsx global>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </div>
   );
 }
