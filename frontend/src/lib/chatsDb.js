@@ -16,7 +16,6 @@ import {
   orderByChild,
   limitToLast
 } from './firebaseThird';
-import { notifyChatMessage } from './pushNotificationService';
 
 // Chat statuses
 export const CHAT_STATUS = {
@@ -144,14 +143,6 @@ export const sendMessage = async (chatId, senderId, text) => {
       // Update both users' chat lists
       await updateUserChatListAfterMessage(senderId, chatId, otherUserId, message);
       await updateUserChatListAfterMessage(otherUserId, chatId, senderId, message, true);
-      
-      // Send push notification to other user (with 4-hour cooldown)
-      try {
-        await notifyChatMessage(otherUserId, chatId);
-      } catch (notifError) {
-        // Don't fail message send if notification fails
-        console.log('Chat notification skipped:', notifError);
-      }
     }
     
     return { id: newMessageRef.key, ...message };

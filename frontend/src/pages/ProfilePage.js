@@ -51,6 +51,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import NotificationToggle from '@/components/NotificationToggle';
+import { notifyFriendRequest, isNotificationsEnabled } from '@/lib/pushNotificationService';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
@@ -177,6 +178,19 @@ export default function ProfilePage() {
 
     // Subscribe to received requests for real-time updates
     const unsubscribe = subscribeToReceivedRequests(user.id, async (requests) => {
+      // Check for NEW requests (not seen before) to trigger notification
+      const prevRequestIds = receivedRequests.map(r => r.fromUserId);
+      const newRequests = requests.filter(r => !prevRequestIds.includes(r.fromUserId));
+      
+      // Notify for new friend requests (only if notifications enabled)
+      if (newRequests.length > 0 && isNotificationsEnabled()) {
+        for (const req of newRequests) {
+          const userData = requestUserDetails[req.fromUserId];
+          const username = userData?.username || 'Someone';
+          await notifyFriendRequest(req.fromUserId, username);
+        }
+      }
+      
       setReceivedRequests(requests);
       // Load details for new requests
       const newUserIds = requests.map(r => r.fromUserId).filter(id => !requestUserDetails[id]);

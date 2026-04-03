@@ -16,7 +16,6 @@ import {
   orderByChild,
   equalTo
 } from './firebaseSecondary';
-import { notifyFriendRequest, notifyFriendAccepted } from './pushNotificationService';
 
 // Relationship statuses
 export const RELATIONSHIP_STATUS = {
@@ -100,13 +99,6 @@ export const sendFriendRequest = async (fromUserId, toUserId, fromUsername = nul
       createdAt: timestamp
     });
     
-    // Send push notification to recipient
-    try {
-      await notifyFriendRequest(toUserId, fromUserId, fromUsername);
-    } catch (notifError) {
-      console.log('Friend request notification skipped:', notifError);
-    }
-    
     return { success: true };
   } catch (error) {
     console.error('Error sending friend request:', error);
@@ -145,13 +137,6 @@ export const acceptFriendRequest = async (currentUserId, fromUserId, currentUser
       since: timestamp,
       chatEnabled: true
     });
-    
-    // Send push notification to the original sender
-    try {
-      await notifyFriendAccepted(fromUserId, currentUserId, currentUsername);
-    } catch (notifError) {
-      console.log('Friend accepted notification skipped:', notifError);
-    }
     
     return { success: true };
   } catch (error) {

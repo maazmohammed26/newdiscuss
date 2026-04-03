@@ -45,6 +45,7 @@ import {
   Copy, X, Reply, Flag, Check
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { notifyChatMessage, isNotificationsEnabled } from '@/lib/pushNotificationService';
 
 export default function ChatConversationPage() {
   const { otherUserId } = useParams();
@@ -180,6 +181,17 @@ export default function ChatConversationPage() {
     loadCachedMessages();
 
     const unsubscribe = subscribeToMessages(chatId, async (newMessages) => {
+      // Check for new messages from OTHER user (not me)
+      const prevMessageIds = messages.map(m => m.id);
+      const newIncoming = newMessages.filter(m => 
+        m.sender !== user?.id && !prevMessageIds.includes(m.id)
+      );
+      
+      // Notify for new incoming messages (only if notifications enabled and not focused)
+      if (newIncoming.length > 0 && isNotificationsEnabled() && document.hidden) {
+        await notifyChatMessage(chatId, otherUserData?.username);
+      }
+      
       setMessages(newMessages);
       // Cache the messages
       await cacheMessages(chatId, newMessages);
