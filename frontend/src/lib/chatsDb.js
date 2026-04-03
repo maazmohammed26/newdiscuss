@@ -660,3 +660,272 @@ export const getBlockedByInfo = async (chatId) => {
   }
 };
 
+
+/**
+ * Delete a message for the current user only (local delete)
+ * @param {string} chatId - Chat ID
+ * @param {string} messageId - Message ID
+ * @param {string} userId - Current user's ID
+ */
+export const deleteMessageForMe = async (chatId, messageId, userId) => {
+  try {
+    if (!thirdDatabase) throw new Error('Database not available');
+    
+    // Store in user's deleted messages list
+    const deletedRef = ref(thirdDatabase, `deletedMessages/${userId}/${chatId}/${messageId}`);
+    await set(deletedRef, {
+      deletedAt: new Date().toISOString()
+    });
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting message for me:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete a message for everyone (mark as deleted)
+ * @param {string} chatId - Chat ID
+ * @param {string} messageId - Message ID
+ * @param {string} userId - Current user's ID (must be sender)
+ */
+export const deleteMessageForEveryone = async (chatId, messageId, userId) => {
+  try {
+    if (!thirdDatabase) throw new Error('Database not available');
+    
+    // Get the message first to verify sender
+    const messageRef = ref(thirdDatabase, `messages/${chatId}/${messageId}`);
+    const snapshot = await get(messageRef);
+    
+    if (!snapshot.exists()) throw new Error('Message not found');
+    
+    const message = snapshot.val();
+    if (message.sender !== userId) throw new Error('Only sender can delete for everyone');
+    
+    // Update message to show as deleted
+    await update(messageRef, {
+      deleted: true,
+      deletedAt: new Date().toISOString(),
+      text: 'This message was deleted'
+    });
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting message for everyone:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get user's deleted messages for a chat
+ * @param {string} userId - User's ID
+ * @param {string} chatId - Chat ID
+ */
+export const getDeletedMessages = async (userId, chatId) => {
+  try {
+    if (!thirdDatabase) return [];
+    
+    const deletedRef = ref(thirdDatabase, `deletedMessages/${userId}/${chatId}`);
+    const snapshot = await get(deletedRef);
+    
+    if (!snapshot.exists()) return [];
+    
+    return Object.keys(snapshot.val());
+  } catch (error) {
+    console.error('Error getting deleted messages:', error);
+    return [];
+  }
+};
+
+/**
+ * Send a reply to a specific message
+ * @param {string} chatId - Chat ID
+ * @param {string} senderId - Sender's user ID
+ * @param {string} text - Message text
+ * @param {Object} replyTo - The message being replied to
+ */
+export const sendReplyMessage = async (chatId, senderId, text, replyTo) => {
+  try {
+    if (!thirdDatabase) throw new Error('Database not available');
+    
+    const timestamp = new Date().toISOString();
+    
+    // Add message with reply info
+    const messagesRef = ref(thirdDatabase, `messages/${chatId}`);
+    const newMessageRef = push(messagesRef);
+    const message = {
+      text: text.trim(),
+      sender: senderId,
+      timestamp,
+      read: false,
+      status: 'sent',
+      replyTo: {
+        id: replyTo.id,
+        text: replyTo.text?.substring(0, 100) || '', // Limit preview text
+        sender: replyTo.sender
+      }
+    };
+    await set(newMessageRef, message);
+    
+    // Update chat's last message
+    const chatRef = ref(thirdDatabase, `chats/${chatId}`);
+    await update(chatRef, {
+      lastMessage: {
+        text: text.trim(),
+        sender: senderId,
+        timestamp
+      }
+    });
+    
+    // Get chat to find other participant
+    const chatSnap = await get(chatRef);
+    if (chatSnap.exists()) {
+      const chat = chatSnap.val();
+      const otherUserId = chat.participants.find(p => p !== senderId);
+      
+      // Update both users' chat lists
+      await updateUserChatListAfterMessageInternal(senderId, chatId, otherUserId, message);
+      await updateUserChatListAfterMessageInternal(otherUserId, chatId, senderId, message, true);
+    }
+    
+    return { id: newMessageRef.key, ...message };
+  } catch (error) {
+    console.error('Error sending reply message:', error);
+    throw error;
+  }
+};
+
+// Internal helper for updating chat list after message
+const updateUserChatListAfterMessageInternal = async (userId, chatId, otherUserId, message, incrementUnread = false) => {
+  try {
+    const userChatRef = ref(thirdDatabase, `userChats/${userId}/${chatId}`);
+    const snapshot = await get(userChatRef);
+    
+    const currentData = snapshot.exists() ? snapshot.val() : { unreadCount: 0 };
+    
+    await update(userChatRef, {
+      otherUser: otherUserId,
+      lastMessage: message.text,
+      lastMessageTime: message.timestamp,
+      unreadCount: incrementUnread ? (currentData.unreadCount || 0) + 1 : 0,
+      status: CHAT_STATUS.ACTIVE
+    });
+  } catch (error) {
+    console.error('Error updating chat list after message:', error);
+  }
+};
+
+/**
+ * Report a user and restrict chat
+ * @param {string} currentUserId - Current user's ID (reporter)
+ * @param {string} reportedUserId - Reported user's ID
+ * @param {string} chatId - Chat ID
+ */
+export const reportAndRestrictUser = async (currentUserId, reportedUserId, chatId) => {
+  try {
+    if (!thirdDatabase) throw new Error('Database not available');
+    
+    const timestamp = new Date().toISOString();
+    
+    // Store report
+    const reportRef = ref(thirdDatabase, `reports/${currentUserId}_${reportedUserId}`);
+    await set(reportRef, {
+      reporter: currentUserId,
+      reported: reportedUserId,
+      chatId,
+      timestamp,
+      status: 'pending'
+    });
+    
+    // Update chat status to restricted
+    const chatRef = ref(thirdDatabase, `chats/${chatId}`);
+    await update(chatRef, {
+      status: 'restricted',
+      restrictedBy: currentUserId,
+      restrictedAt: timestamp
+    });
+    
+    // Update both users' chat lists
+    const userChatRef1 = ref(thirdDatabase, `userChats/${currentUserId}/${chatId}`);
+    const userChatRef2 = ref(thirdDatabase, `userChats/${reportedUserId}/${chatId}`);
+    
+    await update(userChatRef1, { status: 'restricted' });
+    await update(userChatRef2, { status: 'restricted' });
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error reporting user:', error);
+    throw error;
+  }
+};
+
+/**
+ * Check if a user has been reported
+ * @param {string} userId1 - First user's ID
+ * @param {string} userId2 - Second user's ID
+ */
+export const isUserReported = async (userId1, userId2) => {
+  try {
+    if (!thirdDatabase) return false;
+    
+    const reportRef1 = ref(thirdDatabase, `reports/${userId1}_${userId2}`);
+    const reportRef2 = ref(thirdDatabase, `reports/${userId2}_${userId1}`);
+    
+    const [snap1, snap2] = await Promise.all([get(reportRef1), get(reportRef2)]);
+    
+    return snap1.exists() || snap2.exists();
+  } catch (error) {
+    console.error('Error checking report status:', error);
+    return false;
+  }
+};
+
+/**
+ * Run auto-delete for all chats that have it enabled
+ * This should be called periodically or on app load
+ */
+export const runAutoDeleteCleanup = async () => {
+  try {
+    if (!thirdDatabase) return;
+    
+    const chatsRef = ref(thirdDatabase, 'chats');
+    const snapshot = await get(chatsRef);
+    
+    if (!snapshot.exists()) return;
+    
+    const chats = snapshot.val();
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    
+    for (const [chatId, chat] of Object.entries(chats)) {
+      if (chat.autoDelete) {
+        // Delete messages older than 24 hours
+        const messagesRef = ref(thirdDatabase, `messages/${chatId}`);
+        const messagesSnap = await get(messagesRef);
+        
+        if (messagesSnap.exists()) {
+          const messages = messagesSnap.val();
+          for (const [messageId, message] of Object.entries(messages)) {
+            const messageDate = new Date(message.timestamp);
+            if (messageDate < oneDayAgo && !message.deleted) {
+              // Delete old message
+              const messageRef = ref(thirdDatabase, `messages/${chatId}/${messageId}`);
+              await remove(messageRef);
+            }
+          }
+        }
+        
+        // Check if chat itself should be deleted (24h after last message)
+        const lastMessageTime = new Date(chat.lastMessage?.timestamp || chat.createdAt);
+        if (lastMessageTime < oneDayAgo) {
+          // Delete the entire chat
+          await deleteChat(chatId);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error running auto-delete cleanup:', error);
+  }
+};
+

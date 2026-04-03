@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUser } from '@/lib/db';
 import { getUserProfile } from '@/lib/userProfileDb';
-import { isChatEnabled, getRelationshipStatus, getRelationshipDetails, RELATIONSHIP_STATUS } from '@/lib/relationshipsDb';
+import { isChatEnabled, getRelationshipStatus, getRelationshipDetails, RELATIONSHIP_STATUS, unfollowFriend } from '@/lib/relationshipsDb';
 import { 
   getOrCreateChat, 
   sendMessage, 
@@ -15,6 +15,12 @@ import {
   deleteOldMessages,
   generateChatId,
   deleteChat,
+  deleteMessageForMe,
+  deleteMessageForEveryone,
+  getDeletedMessages,
+  sendReplyMessage,
+  reportAndRestrictUser,
+  runAutoDeleteCleanup,
   CHAT_STATUS
 } from '@/lib/chatsDb';
 import { 
@@ -28,7 +34,6 @@ import VerifiedBadge from '@/components/VerifiedBadge';
 import ChatLinkText from '@/components/ChatLinkText';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -37,7 +42,8 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { 
-  ArrowLeft, Send, Loader2, Lock, MoreVertical, Trash2, User, AlertTriangle, Clock, Settings 
+  ArrowLeft, Send, Loader2, Lock, MoreVertical, Trash2, User, AlertTriangle, Clock, 
+  Copy, X, Reply, Flag, Check
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -52,6 +58,7 @@ export default function ChatConversationPage() {
   const [otherUser, setOtherUser] = useState(null);
   const [otherUserProfile, setOtherUserProfile] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [deletedMessageIds, setDeletedMessageIds] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -62,8 +69,22 @@ export default function ChatConversationPage() {
   const [unfollowedBy, setUnfollowedBy] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAutoDeleteConfirm, setShowAutoDeleteConfirm] = useState(false);
+  const [showReportConfirm, setShowReportConfirm] = useState(false);
   const [autoDeleteEnabled, setAutoDeleteEnabled] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [reporting, setReporting] = useState(false);
+
+  // Reply state
+  const [replyTo, setReplyTo] = useState(null);
+
+  // Message action states
+  const [selectedMessage, setSelectedMessage] = useState(null);
+  const [showMessageOptions, setShowMessageOptions] = useState(false);
+  const [showDeleteMessageConfirm, setShowDeleteMessageConfirm] = useState(false);
+  const [deleteMode, setDeleteMode] = useState(null); // 'me' or 'everyone'
+
+  // Swipe state for reply
+  const [swipeStates, setSwipeStates] = useState({});
 
   // Load other user data and chat
   useEffect(() => {
@@ -71,6 +92,9 @@ export default function ChatConversationPage() {
 
     const loadData = async () => {
       try {
+        // Run auto-delete cleanup on load
+        runAutoDeleteCleanup();
+
         // Load other user details
         const [userData, profileData] = await Promise.all([
           getUser(otherUserId),
@@ -106,6 +130,10 @@ export default function ChatConversationPage() {
         if (chatSettings) {
           setAutoDeleteEnabled(chatSettings.autoDelete || false);
         }
+
+        // Load deleted messages for current user
+        const deleted = await getDeletedMessages(user.id, generatedChatId);
+        setDeletedMessageIds(deleted);
 
         // If chat is enabled, try to get/create it
         if (canChat) {
@@ -175,15 +203,20 @@ export default function ChatConversationPage() {
     if (!newMessage.trim() || !chatId || sending || !chatEnabled) return;
 
     const messageText = newMessage.trim();
-    setNewMessage(''); // Clear immediately for instant feedback
+    setNewMessage('');
     setSending(true);
     
     try {
-      await sendMessage(chatId, user.id, messageText);
+      if (replyTo) {
+        await sendReplyMessage(chatId, user.id, messageText, replyTo);
+        setReplyTo(null);
+      } else {
+        await sendMessage(chatId, user.id, messageText);
+      }
       inputRef.current?.focus();
     } catch (error) {
       console.error('Send message error:', error);
-      setNewMessage(messageText); // Restore message if failed
+      setNewMessage(messageText);
       toast.error('Failed to send message');
     } finally {
       setSending(false);
@@ -216,13 +249,129 @@ export default function ChatConversationPage() {
       
       if (!autoDeleteEnabled) {
         toast.success('Auto-delete enabled. Messages will be deleted after 24 hours.');
-        // Run initial cleanup
         await deleteOldMessages(chatId, 24);
       } else {
-        toast.success('Auto-delete disabled. Messages will be kept permanently.');
+        toast.success('Auto-delete disabled.');
       }
     } catch (error) {
       toast.error('Failed to update settings');
+    }
+  };
+
+  // Handle message long press
+  const handleMessageLongPress = (message) => {
+    setSelectedMessage(message);
+    setShowMessageOptions(true);
+  };
+
+  // Copy message text
+  const handleCopyMessage = async () => {
+    if (selectedMessage) {
+      try {
+        await navigator.clipboard.writeText(selectedMessage.text);
+        toast.success('Message copied');
+      } catch (err) {
+        toast.error('Failed to copy');
+      }
+    }
+    setShowMessageOptions(false);
+    setSelectedMessage(null);
+  };
+
+  // Delete message for me
+  const handleDeleteForMe = async () => {
+    if (!selectedMessage || !chatId) return;
+    
+    try {
+      await deleteMessageForMe(chatId, selectedMessage.id, user.id);
+      setDeletedMessageIds(prev => [...prev, selectedMessage.id]);
+      toast.success('Message deleted for you');
+    } catch (error) {
+      toast.error('Failed to delete message');
+    }
+    setShowDeleteMessageConfirm(false);
+    setShowMessageOptions(false);
+    setSelectedMessage(null);
+    setDeleteMode(null);
+  };
+
+  // Delete message for everyone
+  const handleDeleteForEveryone = async () => {
+    if (!selectedMessage || !chatId) return;
+    
+    try {
+      await deleteMessageForEveryone(chatId, selectedMessage.id, user.id);
+      toast.success('Message deleted for everyone');
+    } catch (error) {
+      toast.error(error.message || 'Failed to delete message');
+    }
+    setShowDeleteMessageConfirm(false);
+    setShowMessageOptions(false);
+    setSelectedMessage(null);
+    setDeleteMode(null);
+  };
+
+  // Handle swipe for reply
+  const handleSwipeStart = (messageId, e) => {
+    const touch = e.touches ? e.touches[0] : e;
+    setSwipeStates(prev => ({
+      ...prev,
+      [messageId]: { startX: touch.clientX, currentX: touch.clientX }
+    }));
+  };
+
+  const handleSwipeMove = (messageId, e) => {
+    if (!swipeStates[messageId]) return;
+    
+    const touch = e.touches ? e.touches[0] : e;
+    setSwipeStates(prev => ({
+      ...prev,
+      [messageId]: { ...prev[messageId], currentX: touch.clientX }
+    }));
+  };
+
+  const handleSwipeEnd = (message, isOwn) => {
+    const state = swipeStates[message.id];
+    if (!state) return;
+
+    const diff = state.currentX - state.startX;
+    const threshold = 50;
+
+    // Swipe right on received, swipe left on own
+    if ((isOwn && diff < -threshold) || (!isOwn && diff > threshold)) {
+      setReplyTo(message);
+      inputRef.current?.focus();
+    }
+
+    setSwipeStates(prev => {
+      const newStates = { ...prev };
+      delete newStates[message.id];
+      return newStates;
+    });
+  };
+
+  // Handle report user
+  const handleReportUser = async () => {
+    if (!chatId || !otherUserId) return;
+    
+    setReporting(true);
+    try {
+      // Report and restrict chat
+      await reportAndRestrictUser(user.id, otherUserId, chatId);
+      
+      // Auto-unfollow
+      await unfollowFriend(user.id, otherUserId);
+      
+      toast.success('User reported. Chat has been restricted.');
+      setChatEnabled(false);
+      setChatStatus('restricted');
+      setRelationshipStatus(RELATIONSHIP_STATUS.UNFOLLOWED);
+      navigate('/chat');
+    } catch (error) {
+      toast.error('Failed to report user');
+    } finally {
+      setReporting(false);
+      setShowReportConfirm(false);
     }
   };
 
@@ -248,8 +397,11 @@ export default function ChatConversationPage() {
     }
   };
 
+  // Filter out deleted messages for current user
+  const visibleMessages = messages.filter(m => !deletedMessageIds.includes(m.id));
+
   // Group messages by date
-  const groupedMessages = messages.reduce((groups, message) => {
+  const groupedMessages = visibleMessages.reduce((groups, message) => {
     const date = formatMessageDate(message.timestamp);
     if (!groups[date]) {
       groups[date] = [];
@@ -263,22 +415,25 @@ export default function ChatConversationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#0F172A] discuss:bg-[#121212] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[#2563EB] discuss:text-[#EF4444]" />
+      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 discuss:bg-[#121212] flex flex-col items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#2563EB] discuss:text-[#EF4444] mb-3" />
+        <p className="text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF] text-sm">
+          Loading chat, please wait...
+        </p>
       </div>
     );
   }
 
   if (!otherUser) {
     return (
-      <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#0F172A] discuss:bg-[#121212]">
+      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 discuss:bg-[#121212]">
         <Header />
         <div className="max-w-2xl mx-auto px-4 py-20 text-center">
-          <User className="w-12 h-12 text-[#6275AF] mx-auto mb-4" />
-          <h2 className="text-lg font-bold text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] mb-2">
+          <User className="w-12 h-12 text-neutral-400 mx-auto mb-4" />
+          <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-50 discuss:text-[#F5F5F5] mb-2">
             User not found
           </h2>
-          <Button onClick={() => navigate('/chat')} variant="outline">
+          <Button onClick={() => navigate('/chat')} variant="outline" className="rounded-[6px]">
             Back to Chats
           </Button>
         </div>
@@ -287,14 +442,14 @@ export default function ChatConversationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#0F172A] discuss:bg-[#121212] flex flex-col">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 discuss:bg-[#121212] flex flex-col">
       {/* Header */}
-      <div className="bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] border-b border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333] px-4 py-3 sticky top-0 z-10">
+      <div className="bg-white dark:bg-neutral-800 discuss:bg-[#1a1a1a] border-b border-neutral-200 dark:border-neutral-700 discuss:border-[#333333] px-4 py-3 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate('/chat')}
-              className="p-2 -ml-2 rounded-lg hover:bg-[#F5F5F7] dark:hover:bg-[#0F172A] discuss:hover:bg-[#262626] text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] transition-colors"
+              className="p-2 -ml-2 rounded-[6px] hover:bg-neutral-100 dark:hover:bg-neutral-700 discuss:hover:bg-[#262626] text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF] transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -317,12 +472,12 @@ export default function ChatConversationPage() {
               
               <div className="text-left">
                 <div className="flex items-center gap-1">
-                  <span className="font-semibold text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] text-sm">
+                  <span className="font-semibold text-neutral-900 dark:text-neutral-50 discuss:text-[#F5F5F5] text-sm">
                     {displayName}
                   </span>
                   {otherUser.verified && <VerifiedBadge size="sm" />}
                 </div>
-                <p className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-xs">
+                <p className="text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF] text-xs">
                   @{otherUser.username}
                 </p>
               </div>
@@ -331,30 +486,37 @@ export default function ChatConversationPage() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-2 rounded-lg hover:bg-[#F5F5F7] dark:hover:bg-[#0F172A] discuss:hover:bg-[#262626] text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF]">
+              <button className="p-2 rounded-[6px] hover:bg-neutral-100 dark:hover:bg-neutral-700 discuss:hover:bg-[#262626] text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF]">
                 <MoreVertical className="w-5 h-5" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="dark:bg-[#1E293B] dark:border-[#334155] discuss:bg-[#262626] discuss:border-[#333333]">
+            <DropdownMenuContent align="end" className="dark:bg-neutral-800 dark:border-neutral-700 discuss:bg-[#262626] discuss:border-[#333333] rounded-[12px]">
               <DropdownMenuItem
                 onClick={() => navigate(`/user/${otherUserId}`)}
-                className="dark:text-[#F1F5F9] discuss:text-[#F5F5F5] dark:focus:bg-[#334155] discuss:focus:bg-[#333333]"
+                className="dark:text-neutral-50 discuss:text-[#F5F5F5] dark:focus:bg-neutral-700 discuss:focus:bg-[#333333] rounded-[6px]"
               >
                 <User className="w-4 h-4 mr-2" />
                 View Profile
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="dark:bg-[#334155] discuss:bg-[#333333]" />
+              <DropdownMenuSeparator className="dark:bg-neutral-700 discuss:bg-[#333333]" />
               <DropdownMenuItem
                 onClick={() => setShowAutoDeleteConfirm(true)}
-                className="dark:text-[#F1F5F9] discuss:text-[#F5F5F5] dark:focus:bg-[#334155] discuss:focus:bg-[#333333]"
+                className="dark:text-neutral-50 discuss:text-[#F5F5F5] dark:focus:bg-neutral-700 discuss:focus:bg-[#333333] rounded-[6px]"
               >
                 <Clock className="w-4 h-4 mr-2" />
                 {autoDeleteEnabled ? 'Disable Auto-Delete' : 'Enable Auto-Delete (24h)'}
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="dark:bg-[#334155] discuss:bg-[#333333]" />
+              <DropdownMenuSeparator className="dark:bg-neutral-700 discuss:bg-[#333333]" />
+              <DropdownMenuItem
+                onClick={() => setShowReportConfirm(true)}
+                className="text-[#F59E0B] focus:text-[#F59E0B] dark:focus:bg-neutral-700 discuss:focus:bg-[#333333] rounded-[6px]"
+              >
+                <Flag className="w-4 h-4 mr-2" />
+                Report User
+              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setShowDeleteConfirm(true)}
-                className="text-[#EF4444] focus:text-[#EF4444] dark:focus:bg-[#334155] discuss:focus:bg-[#333333]"
+                className="text-[#EF4444] focus:text-[#EF4444] dark:focus:bg-neutral-700 discuss:focus:bg-[#333333] rounded-[6px]"
               >
                 <Trash2 className="w-4 h-4 mr-2" />
                 Delete Chat
@@ -364,7 +526,7 @@ export default function ChatConversationPage() {
         </div>
       </div>
 
-      {/* Auto-delete banner - visible to both users */}
+      {/* Auto-delete banner */}
       {autoDeleteEnabled && (
         <div className="bg-[#F59E0B]/10 border-b border-[#F59E0B]/20 px-4 py-2">
           <div className="max-w-2xl mx-auto flex items-center justify-between">
@@ -384,18 +546,41 @@ export default function ChatConversationPage() {
         </div>
       )}
 
+      {/* Reply preview */}
+      {replyTo && (
+        <div className="bg-white dark:bg-neutral-800 discuss:bg-[#1a1a1a] border-b border-neutral-200 dark:border-neutral-700 discuss:border-[#333333] px-4 py-2">
+          <div className="max-w-2xl mx-auto flex items-center gap-3">
+            <div className="w-1 h-10 bg-[#2563EB] discuss:bg-[#EF4444] rounded-full" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[#2563EB] discuss:text-[#EF4444] text-xs font-semibold">
+                Replying to {replyTo.sender === user.id ? 'yourself' : otherUser?.username}
+              </p>
+              <p className="text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF] text-sm truncate">
+                {replyTo.text}
+              </p>
+            </div>
+            <button
+              onClick={() => setReplyTo(null)}
+              className="p-1.5 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-700 discuss:hover:bg-[#262626] text-neutral-400"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Messages */}
       <div 
         ref={messagesContainerRef}
         className="flex-1 overflow-y-auto px-4 py-4 scrollbar-hide"
-        style={{ maxHeight: autoDeleteEnabled ? 'calc(100vh - 176px)' : 'calc(100vh - 140px)' }}
+        style={{ maxHeight: `calc(100vh - ${autoDeleteEnabled ? 176 : (replyTo ? 180 : 140)}px)` }}
       >
         <div className="max-w-2xl mx-auto space-y-4">
           {Object.entries(groupedMessages).map(([date, dateMessages]) => (
             <div key={date}>
               {/* Date separator */}
               <div className="flex items-center justify-center my-4">
-                <span className="bg-[#E2E8F0] dark:bg-[#334155] discuss:bg-[#333333] text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-xs px-3 py-1 rounded-full">
+                <span className="bg-neutral-200 dark:bg-neutral-700 discuss:bg-[#333333] text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF] text-xs px-3 py-1 rounded-full">
                   {date}
                 </span>
               </div>
@@ -404,12 +589,36 @@ export default function ChatConversationPage() {
               {dateMessages.map((message, index) => {
                 const isOwn = message.sender === user.id;
                 const showAvatar = !isOwn && (index === 0 || dateMessages[index - 1]?.sender !== message.sender);
+                const swipeState = swipeStates[message.id];
+                const swipeOffset = swipeState ? swipeState.currentX - swipeState.startX : 0;
+                const clampedOffset = isOwn 
+                  ? Math.min(0, Math.max(-60, swipeOffset))
+                  : Math.max(0, Math.min(60, swipeOffset));
                 
                 return (
                   <div
                     key={message.id}
-                    className={`flex items-end gap-2 mb-2 ${isOwn ? 'justify-end' : 'justify-start'}`}
+                    className={`flex items-end gap-2 mb-2 ${isOwn ? 'justify-end' : 'justify-start'} relative`}
+                    onTouchStart={(e) => handleSwipeStart(message.id, e)}
+                    onTouchMove={(e) => handleSwipeMove(message.id, e)}
+                    onTouchEnd={() => handleSwipeEnd(message, isOwn)}
+                    onMouseDown={(e) => handleSwipeStart(message.id, e)}
+                    onMouseMove={(e) => swipeStates[message.id] && handleSwipeMove(message.id, e)}
+                    onMouseUp={() => handleSwipeEnd(message, isOwn)}
+                    onMouseLeave={() => handleSwipeEnd(message, isOwn)}
                   >
+                    {/* Swipe reply indicator */}
+                    {!isOwn && swipeOffset > 30 && (
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2">
+                        <Reply className="w-5 h-5 text-[#2563EB] discuss:text-[#EF4444]" />
+                      </div>
+                    )}
+                    {isOwn && swipeOffset < -30 && (
+                      <div className="absolute right-0 top-1/2 -translate-y-1/2">
+                        <Reply className="w-5 h-5 text-[#2563EB] discuss:text-[#EF4444] transform scale-x-[-1]" />
+                      </div>
+                    )}
+
                     {!isOwn && showAvatar && (
                       otherUser.photo_url ? (
                         <img
@@ -426,18 +635,56 @@ export default function ChatConversationPage() {
                     {!isOwn && !showAvatar && <div className="w-6" />}
                     
                     <div
-                      className={`max-w-[75%] px-4 py-2 rounded-2xl ${
-                        isOwn
-                          ? 'bg-[#2563EB] discuss:bg-[#EF4444] text-white rounded-br-md'
-                          : 'bg-white dark:bg-[#1E293B] discuss:bg-[#262626] text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] border border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333] rounded-bl-md'
-                      }`}
+                      style={{ transform: `translateX(${clampedOffset}px)` }}
+                      className={`max-w-[75%] transition-transform duration-100 ${message.deleted ? 'opacity-60' : ''}`}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        handleMessageLongPress(message);
+                      }}
+                      onClick={() => {
+                        // On mobile, double tap for options
+                        if (window.innerWidth < 768) {
+                          handleMessageLongPress(message);
+                        }
+                      }}
                     >
-                      <p className="text-sm whitespace-pre-wrap break-words">
-                        <ChatLinkText text={message.text} />
-                      </p>
-                      <p className={`text-[10px] mt-1 ${isOwn ? 'text-white/70' : 'text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF]'}`}>
-                        {formatMessageTime(message.timestamp)}
-                      </p>
+                      {/* Reply reference */}
+                      {message.replyTo && (
+                        <div className={`mb-1 px-3 py-1.5 rounded-lg text-xs ${
+                          isOwn 
+                            ? 'bg-[#1D4ED8] discuss:bg-[#DC2626] text-white/80' 
+                            : 'bg-neutral-100 dark:bg-neutral-700 discuss:bg-[#333333] text-neutral-500 dark:text-neutral-400'
+                        }`}>
+                          <p className="font-medium truncate">
+                            {message.replyTo.sender === user.id ? 'You' : otherUser?.username}
+                          </p>
+                          <p className="truncate opacity-80">{message.replyTo.text}</p>
+                        </div>
+                      )}
+                      
+                      <div
+                        className={`px-4 py-2 rounded-2xl ${
+                          isOwn
+                            ? 'bg-[#2563EB] discuss:bg-[#EF4444] text-white rounded-br-md'
+                            : 'bg-white dark:bg-neutral-800 discuss:bg-[#262626] text-neutral-900 dark:text-neutral-50 discuss:text-[#F5F5F5] border border-neutral-200 dark:border-neutral-700 discuss:border-[#333333] rounded-bl-md'
+                        }`}
+                      >
+                        <p className="text-sm whitespace-pre-wrap break-words">
+                          {message.deleted ? (
+                            <em className="opacity-70">This message was deleted</em>
+                          ) : (
+                            <ChatLinkText text={message.text} />
+                          )}
+                        </p>
+                        <div className={`flex items-center gap-1 mt-1 ${isOwn ? 'justify-end' : ''}`}>
+                          <p className={`text-[10px] ${isOwn ? 'text-white/70' : 'text-neutral-400 dark:text-neutral-500 discuss:text-[#9CA3AF]'}`}>
+                            {formatMessageTime(message.timestamp)}
+                          </p>
+                          {isOwn && message.status === 'sent' && (
+                            <Check className="w-3 h-3 text-white/70" />
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );
@@ -445,9 +692,9 @@ export default function ChatConversationPage() {
             </div>
           ))}
           
-          {messages.length === 0 && chatEnabled && (
+          {visibleMessages.length === 0 && chatEnabled && (
             <div className="text-center py-10">
-              <p className="text-[#6275AF] dark:text-[#94A3B8] discuss:text-[#9CA3AF] text-sm">
+              <p className="text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF] text-sm">
                 No messages yet. Say hello! 👋
               </p>
             </div>
@@ -468,20 +715,24 @@ export default function ChatConversationPage() {
                   You can no longer send messages to this user
                 </p>
                 <p className="text-[#B45309] dark:text-[#FBBF24] discuss:text-[#FBBF24] text-xs mt-0.5">
-                  {relationshipStatus === RELATIONSHIP_STATUS.UNFOLLOWED 
-                    ? (unfollowedBy === user?.id 
-                        ? 'You unfollowed this user. Send a friend request to chat again.'
-                        : 'This user has unfollowed you.')
-                    : 'You need to be friends to send messages.'}
+                  {chatStatus === 'restricted' 
+                    ? 'This chat has been restricted due to a report.'
+                    : relationshipStatus === RELATIONSHIP_STATUS.UNFOLLOWED 
+                      ? (unfollowedBy === user?.id 
+                          ? 'You unfollowed this user. Send a friend request to chat again.'
+                          : 'This user has unfollowed you.')
+                      : 'You need to be friends to send messages.'}
                 </p>
               </div>
-              <FriendRequestButton
-                targetUserId={otherUserId}
-                targetUsername={otherUser?.username}
-                size="sm"
-                showChat={false}
-                onStatusChange={handleStatusChange}
-              />
+              {chatStatus !== 'restricted' && (
+                <FriendRequestButton
+                  targetUserId={otherUserId}
+                  targetUsername={otherUser?.username}
+                  size="sm"
+                  showChat={false}
+                  onStatusChange={handleStatusChange}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -489,20 +740,20 @@ export default function ChatConversationPage() {
 
       {/* Message input */}
       {chatEnabled && (
-        <div className="bg-white dark:bg-[#1E293B] discuss:bg-[#1a1a1a] border-t border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333] px-4 py-3 sticky bottom-0">
+        <div className="bg-white dark:bg-neutral-800 discuss:bg-[#1a1a1a] border-t border-neutral-200 dark:border-neutral-700 discuss:border-[#333333] px-4 py-3 sticky bottom-0">
           <form onSubmit={handleSendMessage} className="max-w-2xl mx-auto flex items-center gap-2">
             <Input
               ref={inputRef}
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type a message..."
-              className="flex-1 bg-[#F5F5F7] dark:bg-[#0F172A] discuss:bg-[#262626] border-0 text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] placeholder:text-[#6275AF] dark:placeholder:text-[#94A3B8] discuss:placeholder:text-[#9CA3AF] rounded-full px-4"
+              placeholder={replyTo ? "Type your reply..." : "Type a message..."}
+              className="flex-1 bg-neutral-100 dark:bg-neutral-900 discuss:bg-[#262626] border-0 text-neutral-900 dark:text-neutral-50 discuss:text-[#F5F5F5] placeholder:text-neutral-400 dark:placeholder:text-neutral-500 discuss:placeholder:text-[#9CA3AF] rounded-full px-4"
               disabled={sending}
             />
             <Button
               type="submit"
               disabled={!newMessage.trim() || sending}
-              className="rounded-full w-10 h-10 p-0 bg-[#2563EB] discuss:bg-[#EF4444] hover:bg-[#1D4ED8] discuss:hover:bg-[#DC2626] text-white"
+              className="rounded-full w-10 h-10 p-0 bg-[#2563EB] discuss:bg-[#EF4444] hover:bg-[#1D4ED8] discuss:hover:bg-[#DC2626] text-white shadow-button"
             >
               {sending ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -514,26 +765,111 @@ export default function ChatConversationPage() {
         </div>
       )}
 
-      {/* Delete confirmation dialog */}
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent className="dark:bg-[#1E293B] dark:border-[#334155] discuss:bg-[#262626] discuss:border-[#333333]">
+      {/* Message options dialog */}
+      <AlertDialog open={showMessageOptions} onOpenChange={setShowMessageOptions}>
+        <AlertDialogContent className="dark:bg-neutral-800 dark:border-neutral-700 discuss:bg-[#262626] discuss:border-[#333333] rounded-[12px] max-w-xs">
           <AlertDialogHeader>
-            <AlertDialogTitle className="dark:text-[#F1F5F9] discuss:text-[#F5F5F5] flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-[#EF4444]" />
-              Delete Chat?
+            <AlertDialogTitle className="dark:text-neutral-50 discuss:text-[#F5F5F5] text-center">
+              Message Options
             </AlertDialogTitle>
-            <AlertDialogDescription className="dark:text-[#94A3B8] discuss:text-[#9CA3AF]">
-              This will delete the chat for both users. This action cannot be undone. Are you sure you want to continue?
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <button
+              onClick={() => {
+                setReplyTo(selectedMessage);
+                setShowMessageOptions(false);
+                inputRef.current?.focus();
+              }}
+              className="w-full flex items-center gap-3 p-3 rounded-[6px] hover:bg-neutral-100 dark:hover:bg-neutral-700 discuss:hover:bg-[#333333] text-neutral-900 dark:text-neutral-50 discuss:text-[#F5F5F5] transition-colors"
+            >
+              <Reply className="w-5 h-5 text-[#2563EB] discuss:text-[#EF4444]" />
+              <span>Reply</span>
+            </button>
+            <button
+              onClick={handleCopyMessage}
+              className="w-full flex items-center gap-3 p-3 rounded-[6px] hover:bg-neutral-100 dark:hover:bg-neutral-700 discuss:hover:bg-[#333333] text-neutral-900 dark:text-neutral-50 discuss:text-[#F5F5F5] transition-colors"
+            >
+              <Copy className="w-5 h-5 text-[#10B981]" />
+              <span>Copy</span>
+            </button>
+            <button
+              onClick={() => {
+                setDeleteMode('me');
+                setShowDeleteMessageConfirm(true);
+              }}
+              className="w-full flex items-center gap-3 p-3 rounded-[6px] hover:bg-neutral-100 dark:hover:bg-neutral-700 discuss:hover:bg-[#333333] text-neutral-900 dark:text-neutral-50 discuss:text-[#F5F5F5] transition-colors"
+            >
+              <Trash2 className="w-5 h-5 text-[#F59E0B]" />
+              <span>Delete for Me</span>
+            </button>
+            {selectedMessage?.sender === user.id && !selectedMessage?.deleted && (
+              <button
+                onClick={() => {
+                  setDeleteMode('everyone');
+                  setShowDeleteMessageConfirm(true);
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-[6px] hover:bg-neutral-100 dark:hover:bg-neutral-700 discuss:hover:bg-[#333333] text-[#EF4444] transition-colors"
+              >
+                <Trash2 className="w-5 h-5" />
+                <span>Delete for Everyone</span>
+              </button>
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="w-full dark:bg-neutral-700 dark:text-neutral-50 dark:border-neutral-700 discuss:bg-[#333333] discuss:text-[#F5F5F5] discuss:border-[#333333] rounded-[6px]">
+              Cancel
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete message confirmation */}
+      <AlertDialog open={showDeleteMessageConfirm} onOpenChange={setShowDeleteMessageConfirm}>
+        <AlertDialogContent className="dark:bg-neutral-800 dark:border-neutral-700 discuss:bg-[#262626] discuss:border-[#333333] rounded-[12px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="dark:text-neutral-50 discuss:text-[#F5F5F5]">
+              {deleteMode === 'everyone' ? 'Delete for Everyone?' : 'Delete for Me?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="dark:text-neutral-400 discuss:text-[#9CA3AF]">
+              {deleteMode === 'everyone' 
+                ? 'This message will be deleted for everyone in this chat. The message will show as "This message was deleted".'
+                : 'This message will be removed from your chat. The other person can still see it.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="dark:bg-[#334155] dark:text-[#F1F5F9] dark:border-[#334155] discuss:bg-[#333333] discuss:text-[#F5F5F5] discuss:border-[#333333]">
+            <AlertDialogCancel className="dark:bg-neutral-700 dark:text-neutral-50 dark:border-neutral-700 discuss:bg-[#333333] discuss:text-[#F5F5F5] discuss:border-[#333333] rounded-[6px]">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={deleteMode === 'everyone' ? handleDeleteForEveryone : handleDeleteForMe}
+              className="bg-[#EF4444] text-white hover:bg-[#DC2626] rounded-[6px]"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete chat confirmation */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent className="dark:bg-neutral-800 dark:border-neutral-700 discuss:bg-[#262626] discuss:border-[#333333] rounded-[12px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="dark:text-neutral-50 discuss:text-[#F5F5F5] flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-[#EF4444]" />
+              Delete Chat?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="dark:text-neutral-400 discuss:text-[#9CA3AF]">
+              This will delete the chat for both users. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="dark:bg-neutral-700 dark:text-neutral-50 dark:border-neutral-700 discuss:bg-[#333333] discuss:text-[#F5F5F5] discuss:border-[#333333] rounded-[6px]">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteChat}
               disabled={deleting}
-              className="bg-[#EF4444] text-white hover:bg-[#DC2626]"
+              className="bg-[#EF4444] text-white hover:bg-[#DC2626] rounded-[6px]"
             >
               {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Delete Chat'}
             </AlertDialogAction>
@@ -541,33 +877,59 @@ export default function ChatConversationPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Auto-delete confirmation dialog */}
+      {/* Auto-delete confirmation */}
       <AlertDialog open={showAutoDeleteConfirm} onOpenChange={setShowAutoDeleteConfirm}>
-        <AlertDialogContent className="dark:bg-[#1E293B] dark:border-[#334155] discuss:bg-[#262626] discuss:border-[#333333]">
+        <AlertDialogContent className="dark:bg-neutral-800 dark:border-neutral-700 discuss:bg-[#262626] discuss:border-[#333333] rounded-[12px]">
           <AlertDialogHeader>
-            <AlertDialogTitle className="dark:text-[#F1F5F9] discuss:text-[#F5F5F5] flex items-center gap-2">
+            <AlertDialogTitle className="dark:text-neutral-50 discuss:text-[#F5F5F5] flex items-center gap-2">
               <Clock className="w-5 h-5 text-[#F59E0B]" />
               {autoDeleteEnabled ? 'Disable Auto-Delete?' : 'Enable Auto-Delete?'}
             </AlertDialogTitle>
-            <AlertDialogDescription className="dark:text-[#94A3B8] discuss:text-[#9CA3AF]">
+            <AlertDialogDescription className="dark:text-neutral-400 discuss:text-[#9CA3AF]">
               {autoDeleteEnabled 
-                ? 'Messages will be kept permanently. Do you want to disable auto-delete?'
-                : 'All messages will be automatically deleted after 24 hours. This applies to this chat only. Do you want to continue?'
-              }
+                ? 'Messages will be kept permanently.'
+                : 'All messages will be automatically deleted after 24 hours. This applies to this chat only and works for both users.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="dark:bg-[#334155] dark:text-[#F1F5F9] dark:border-[#334155] discuss:bg-[#333333] discuss:text-[#F5F5F5] discuss:border-[#333333]">
+            <AlertDialogCancel className="dark:bg-neutral-700 dark:text-neutral-50 dark:border-neutral-700 discuss:bg-[#333333] discuss:text-[#F5F5F5] discuss:border-[#333333] rounded-[6px]">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleToggleAutoDelete}
               className={autoDeleteEnabled 
-                ? "bg-[#10B981] text-white hover:bg-[#059669]"
-                : "bg-[#F59E0B] text-white hover:bg-[#D97706]"
+                ? "bg-[#10B981] text-white hover:bg-[#059669] rounded-[6px]"
+                : "bg-[#F59E0B] text-white hover:bg-[#D97706] rounded-[6px]"
               }
             >
               {autoDeleteEnabled ? 'Disable' : 'Enable Auto-Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Report confirmation */}
+      <AlertDialog open={showReportConfirm} onOpenChange={setShowReportConfirm}>
+        <AlertDialogContent className="dark:bg-neutral-800 dark:border-neutral-700 discuss:bg-[#262626] discuss:border-[#333333] rounded-[12px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="dark:text-neutral-50 discuss:text-[#F5F5F5] flex items-center gap-2">
+              <Flag className="w-5 h-5 text-[#F59E0B]" />
+              Report User?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="dark:text-neutral-400 discuss:text-[#9CA3AF]">
+              You will no longer be able to message this user. Both users will be restricted from chatting. This user will also be automatically unfollowed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="dark:bg-neutral-700 dark:text-neutral-50 dark:border-neutral-700 discuss:bg-[#333333] discuss:text-[#F5F5F5] discuss:border-[#333333] rounded-[6px]">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleReportUser}
+              disabled={reporting}
+              className="bg-[#EF4444] text-white hover:bg-[#DC2626] rounded-[6px]"
+            >
+              {reporting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Report & Restrict'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -9,13 +9,13 @@ import {
   unfollowFriend,
   RELATIONSHIP_STATUS 
 } from '@/lib/relationshipsDb';
-import { getOrCreateChat, generateChatId, blockChatWithInfo, unblockChat } from '@/lib/chatsDb';
+import { getOrCreateChat, generateChatId, blockChatWithInfo, unblockChat, isUserReported } from '@/lib/chatsDb';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { UserPlus, UserMinus, Clock, Check, X, MessageCircle, Loader2 } from 'lucide-react';
+import { UserPlus, UserMinus, Clock, Check, X, MessageCircle, Loader2, Ban } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -33,6 +33,8 @@ export default function FriendRequestButton({
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [showUnfollowConfirm, setShowUnfollowConfirm] = useState(false);
+  const [isReported, setIsReported] = useState(false);
+  const [hasSentRequest, setHasSentRequest] = useState(false);
 
   useEffect(() => {
     if (user?.id && targetUserId && user.id !== targetUserId) {
@@ -44,8 +46,17 @@ export default function FriendRequestButton({
 
   const loadStatus = async () => {
     try {
-      const relationshipStatus = await getRelationshipStatus(user.id, targetUserId);
+      const [relationshipStatus, reported] = await Promise.all([
+        getRelationshipStatus(user.id, targetUserId),
+        isUserReported(user.id, targetUserId)
+      ]);
       setStatus(relationshipStatus);
+      setIsReported(reported);
+      
+      // Check if request was already sent (for unfollowed users)
+      if (relationshipStatus === RELATIONSHIP_STATUS.PENDING_SENT) {
+        setHasSentRequest(true);
+      }
     } catch (error) {
       console.error('Error loading relationship status:', error);
     } finally {
@@ -58,6 +69,7 @@ export default function FriendRequestButton({
     try {
       await sendFriendRequest(user.id, targetUserId);
       setStatus(RELATIONSHIP_STATUS.PENDING_SENT);
+      setHasSentRequest(true); // Mark that request was sent
       toast.success(`Friend request sent to ${targetUsername}`);
       onStatusChange?.(RELATIONSHIP_STATUS.PENDING_SENT);
     } catch (error) {
@@ -165,16 +177,46 @@ export default function FriendRequestButton({
 
   const buttonSizeClass = size === 'sm' ? 'h-8 px-3 text-xs' : size === 'lg' ? 'h-11 px-5' : 'h-9 px-4';
 
+  // If reported, show restricted state
+  if (isReported) {
+    return (
+      <Button
+        variant="outline"
+        size={size}
+        disabled
+        className={`border-neutral-300 dark:border-neutral-600 text-neutral-400 dark:text-neutral-500 cursor-not-allowed ${buttonSizeClass} ${className}`}
+      >
+        <Ban className="w-4 h-4 mr-1.5" />
+        Restricted
+      </Button>
+    );
+  }
+
   // Render based on status
   switch (status) {
     case RELATIONSHIP_STATUS.NONE:
     case RELATIONSHIP_STATUS.UNFOLLOWED:
+      // If user already sent a request (re-follow scenario), show "Requested" state
+      if (hasSentRequest || status === RELATIONSHIP_STATUS.PENDING_SENT) {
+        return (
+          <Button
+            variant="outline"
+            size={size}
+            disabled
+            className={`border-[#F59E0B] text-[#F59E0B] ${buttonSizeClass} ${className}`}
+          >
+            <Clock className="w-4 h-4 mr-1.5" />
+            Requested
+          </Button>
+        );
+      }
+      
       return (
         <Button
           onClick={handleSendRequest}
           disabled={actionLoading}
           size={size}
-          className={`bg-[#2563EB] hover:bg-[#1D4ED8] text-white discuss:bg-[#EF4444] discuss:hover:bg-[#DC2626] ${buttonSizeClass} ${className}`}
+          className={`bg-[#2563EB] hover:bg-[#1D4ED8] text-white discuss:bg-[#EF4444] discuss:hover:bg-[#DC2626] rounded-[6px] shadow-button ${buttonSizeClass} ${className}`}
         >
           {actionLoading ? (
             <Loader2 className="w-4 h-4 animate-spin" />
