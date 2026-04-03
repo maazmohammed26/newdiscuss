@@ -2,7 +2,6 @@
 // Bell icon with ON/OFF toggle for push notifications
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import {
   isPushSupported,
   isIOS,
@@ -12,16 +11,15 @@ import {
   getPermissionStatus,
   registerPushSubscription,
   unsubscribePush,
-  isNotificationsEnabled
+  isNotificationsEnabled,
+  showNotification
 } from '@/lib/pushNotificationService';
-import { getNotificationSettings } from '@/lib/notificationsDb';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Bell, BellOff, Loader2, AlertCircle, Smartphone } from 'lucide-react';
+import { Bell, BellOff, Loader2, AlertCircle, Smartphone, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function NotificationToggle({ compact = false }) {
-  const { user } = useAuth();
   const [enabled, setEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
@@ -30,15 +28,8 @@ export default function NotificationToggle({ compact = false }) {
   // Check current notification status
   useEffect(() => {
     const checkStatus = async () => {
-      if (!user?.id) {
-        setLoading(false);
-        return;
-      }
-      
       try {
-        const settings = await getNotificationSettings(user.id);
-        const permission = getPermissionStatus();
-        setEnabled(settings.enabled && permission === 'granted');
+        setEnabled(isNotificationsEnabled());
       } catch (error) {
         console.error('Error checking notification status:', error);
       }
@@ -46,11 +37,11 @@ export default function NotificationToggle({ compact = false }) {
     };
     
     checkStatus();
-  }, [user?.id]);
+  }, []);
   
   // Handle toggle
   const handleToggle = async () => {
-    if (!user?.id || toggling) return;
+    if (toggling) return;
     
     // Check iOS requirements
     if (isIOS() && !isPWAInstalled()) {
@@ -80,10 +71,18 @@ export default function NotificationToggle({ compact = false }) {
     try {
       if (!enabled) {
         // Enable notifications
-        const subscription = await registerPushSubscription(user.id);
+        const subscription = await registerPushSubscription();
         if (subscription) {
           setEnabled(true);
           toast.success('Notifications enabled! 🔔');
+          
+          // Send test notification
+          setTimeout(async () => {
+            await showNotification('Welcome to Discuss! 🎉', {
+              body: 'You will now receive notifications for messages and updates.',
+              tag: 'welcome'
+            });
+          }, 1000);
         } else {
           const permission = getPermissionStatus();
           if (permission === 'denied') {
@@ -96,7 +95,7 @@ export default function NotificationToggle({ compact = false }) {
         }
       } else {
         // Disable notifications
-        await unsubscribePush(user.id);
+        await unsubscribePush();
         setEnabled(false);
         toast.success('Notifications disabled');
       }
@@ -106,6 +105,20 @@ export default function NotificationToggle({ compact = false }) {
     }
     
     setToggling(false);
+  };
+  
+  // Test notification button
+  const handleTestNotification = async () => {
+    if (!enabled) {
+      toast.error('Enable notifications first');
+      return;
+    }
+    
+    await showNotification('Test Notification 🧪', {
+      body: 'Push notifications are working correctly!',
+      tag: 'test-' + Date.now()
+    });
+    toast.success('Test notification sent!');
   };
   
   if (loading) {
@@ -166,6 +179,19 @@ export default function NotificationToggle({ compact = false }) {
           />
         </div>
       </div>
+      
+      {/* Test Notification Button */}
+      {enabled && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleTestNotification}
+          className="w-full"
+        >
+          <CheckCircle className="h-4 w-4 mr-2" />
+          Send Test Notification
+        </Button>
+      )}
       
       {/* iOS Help */}
       {showIOSHelp && isIOS() && !isPWAInstalled() && (

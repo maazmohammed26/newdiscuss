@@ -4,7 +4,6 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { Toaster } from '@/components/ui/sonner';
 import LoadingScreen from '@/components/LoadingScreen';
-import { useNotificationListener } from '@/hooks/useNotificationListener';
 import '@/App.css';
 
 const LandingPage = lazy(() => import('@/pages/LandingPage'));
@@ -50,9 +49,6 @@ function AuthStateWatcher() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  
-  // Listen for push notifications
-  useNotificationListener();
   
   useEffect(() => {
     const protectedPaths = ['/feed', '/profile'];
