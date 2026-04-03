@@ -25,8 +25,7 @@ import {
 } from '@/lib/chatsDb';
 import { 
   getCachedMessages, 
-  cacheMessages, 
-  addCachedMessage 
+  cacheMessages
 } from '@/lib/cacheManager';
 import Header from '@/components/Header';
 import FriendRequestButton from '@/components/FriendRequestButton';
@@ -54,6 +53,7 @@ export default function ChatConversationPage() {
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const inputRef = useRef(null);
+  const messageRefs = useRef({});
 
   const [otherUser, setOtherUser] = useState(null);
   const [otherUserProfile, setOtherUserProfile] = useState(null);
@@ -73,6 +73,7 @@ export default function ChatConversationPage() {
   const [autoDeleteEnabled, setAutoDeleteEnabled] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [reporting, setReporting] = useState(false);
+  const [chatCreated, setChatCreated] = useState(false);
 
   // Reply state
   const [replyTo, setReplyTo] = useState(null);
@@ -81,10 +82,14 @@ export default function ChatConversationPage() {
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [showMessageOptions, setShowMessageOptions] = useState(false);
   const [showDeleteMessageConfirm, setShowDeleteMessageConfirm] = useState(false);
-  const [deleteMode, setDeleteMode] = useState(null); // 'me' or 'everyone'
+  const [deleteMode, setDeleteMode] = useState(null);
 
   // Swipe state for reply
   const [swipeStates, setSwipeStates] = useState({});
+
+  // Long press handling
+  const longPressTimer = useRef(null);
+  const [isLongPress, setIsLongPress] = useState(false);
 
   // Load other user data and chat
   useEffect(() => {
@@ -100,6 +105,13 @@ export default function ChatConversationPage() {
           getUser(otherUserId),
           getUserProfile(otherUserId)
         ]);
+        
+        if (!userData) {
+          console.error('User not found:', otherUserId);
+          setLoading(false);
+          return;
+        }
+        
         setOtherUser(userData);
         setOtherUserProfile(profileData);
 
@@ -135,10 +147,11 @@ export default function ChatConversationPage() {
         const deleted = await getDeletedMessages(user.id, generatedChatId);
         setDeletedMessageIds(deleted);
 
-        // If chat is enabled, try to get/create it
+        // If chat is enabled, create it right away to prevent "failed to send" errors
         if (canChat) {
           try {
             await getOrCreateChat(user.id, otherUserId);
+            setChatCreated(true);
           } catch (err) {
             console.error('Error creating chat:', err);
           }
@@ -198,6 +211,21 @@ export default function ChatConversationPage() {
     }
   }, []);
 
+  // Ensure chat exists before sending
+  const ensureChatExists = async () => {
+    if (!chatCreated && chatEnabled) {
+      try {
+        await getOrCreateChat(user.id, otherUserId);
+        setChatCreated(true);
+        return true;
+      } catch (err) {
+        console.error('Failed to create chat:', err);
+        return false;
+      }
+    }
+    return true;
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!newMessage.trim() || !chatId || sending || !chatEnabled) return;
@@ -207,6 +235,12 @@ export default function ChatConversationPage() {
     setSending(true);
     
     try {
+      // Ensure chat exists first
+      const chatExists = await ensureChatExists();
+      if (!chatExists) {
+        throw new Error('Failed to create chat');
+      }
+
       if (replyTo) {
         await sendReplyMessage(chatId, user.id, messageText, replyTo);
         setReplyTo(null);
@@ -258,10 +292,33 @@ export default function ChatConversationPage() {
     }
   };
 
-  // Handle message long press
+  // Handle message long press - ONLY triggered on long press, not click
   const handleMessageLongPress = (message) => {
     setSelectedMessage(message);
     setShowMessageOptions(true);
+  };
+
+  // Long press handlers
+  const handleTouchStart = (message) => {
+    setIsLongPress(false);
+    longPressTimer.current = setTimeout(() => {
+      setIsLongPress(true);
+      handleMessageLongPress(message);
+    }, 500); // 500ms for long press
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const handleTouchMove = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
   };
 
   // Copy message text
@@ -350,16 +407,26 @@ export default function ChatConversationPage() {
     });
   };
 
+  // Scroll to original message when clicking reply preview
+  const scrollToMessage = (messageId) => {
+    const element = messageRefs.current[messageId];
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Highlight the message briefly
+      element.classList.add('ring-2', 'ring-[#2563EB]', 'ring-opacity-50');
+      setTimeout(() => {
+        element.classList.remove('ring-2', 'ring-[#2563EB]', 'ring-opacity-50');
+      }, 2000);
+    }
+  };
+
   // Handle report user
   const handleReportUser = async () => {
     if (!chatId || !otherUserId) return;
     
     setReporting(true);
     try {
-      // Report and restrict chat
       await reportAndRestrictUser(user.id, otherUserId, chatId);
-      
-      // Auto-unfollow
       await unfollowFriend(user.id, otherUserId);
       
       toast.success('User reported. Chat has been restricted.');
@@ -598,14 +665,20 @@ export default function ChatConversationPage() {
                 return (
                   <div
                     key={message.id}
-                    className={`flex items-end gap-2 mb-2 ${isOwn ? 'justify-end' : 'justify-start'} relative`}
-                    onTouchStart={(e) => handleSwipeStart(message.id, e)}
-                    onTouchMove={(e) => handleSwipeMove(message.id, e)}
-                    onTouchEnd={() => handleSwipeEnd(message, isOwn)}
-                    onMouseDown={(e) => handleSwipeStart(message.id, e)}
-                    onMouseMove={(e) => swipeStates[message.id] && handleSwipeMove(message.id, e)}
-                    onMouseUp={() => handleSwipeEnd(message, isOwn)}
-                    onMouseLeave={() => handleSwipeEnd(message, isOwn)}
+                    ref={el => messageRefs.current[message.id] = el}
+                    className={`flex items-end gap-2 mb-2 ${isOwn ? 'justify-end' : 'justify-start'} relative transition-all duration-300`}
+                    onTouchStart={(e) => {
+                      handleSwipeStart(message.id, e);
+                      handleTouchStart(message);
+                    }}
+                    onTouchMove={(e) => {
+                      handleSwipeMove(message.id, e);
+                      handleTouchMove();
+                    }}
+                    onTouchEnd={() => {
+                      handleSwipeEnd(message, isOwn);
+                      handleTouchEnd();
+                    }}
                   >
                     {/* Swipe reply indicator */}
                     {!isOwn && swipeOffset > 30 && (
@@ -641,29 +714,27 @@ export default function ChatConversationPage() {
                         e.preventDefault();
                         handleMessageLongPress(message);
                       }}
-                      onClick={() => {
-                        // On mobile, double tap for options
-                        if (window.innerWidth < 768) {
-                          handleMessageLongPress(message);
-                        }
-                      }}
                     >
-                      {/* Reply reference */}
+                      {/* Reply reference - ONLY this is clickable to scroll */}
                       {message.replyTo && (
-                        <div className={`mb-1 px-3 py-1.5 rounded-lg text-xs ${
-                          isOwn 
-                            ? 'bg-[#1D4ED8] discuss:bg-[#DC2626] text-white/80' 
-                            : 'bg-neutral-100 dark:bg-neutral-700 discuss:bg-[#333333] text-neutral-500 dark:text-neutral-400'
-                        }`}>
+                        <button
+                          onClick={() => scrollToMessage(message.replyTo.id)}
+                          className={`w-full mb-1 px-3 py-1.5 rounded-lg text-xs text-left cursor-pointer hover:opacity-80 transition-opacity ${
+                            isOwn 
+                              ? 'bg-[#1D4ED8] discuss:bg-[#DC2626] text-white/80' 
+                              : 'bg-neutral-100 dark:bg-neutral-700 discuss:bg-[#333333] text-neutral-500 dark:text-neutral-400'
+                          }`}
+                        >
                           <p className="font-medium truncate">
                             {message.replyTo.sender === user.id ? 'You' : otherUser?.username}
                           </p>
                           <p className="truncate opacity-80">{message.replyTo.text}</p>
-                        </div>
+                        </button>
                       )}
                       
+                      {/* Message bubble - NO click handler for navigation */}
                       <div
-                        className={`px-4 py-2 rounded-2xl ${
+                        className={`px-4 py-2 rounded-2xl select-none ${
                           isOwn
                             ? 'bg-[#2563EB] discuss:bg-[#EF4444] text-white rounded-br-md'
                             : 'bg-white dark:bg-neutral-800 discuss:bg-[#262626] text-neutral-900 dark:text-neutral-50 discuss:text-[#F5F5F5] border border-neutral-200 dark:border-neutral-700 discuss:border-[#333333] rounded-bl-md'
@@ -765,7 +836,7 @@ export default function ChatConversationPage() {
         </div>
       )}
 
-      {/* Message options dialog */}
+      {/* Message options dialog - Long press options */}
       <AlertDialog open={showMessageOptions} onOpenChange={setShowMessageOptions}>
         <AlertDialogContent className="dark:bg-neutral-800 dark:border-neutral-700 discuss:bg-[#262626] discuss:border-[#333333] rounded-[12px] max-w-xs">
           <AlertDialogHeader>
@@ -778,6 +849,7 @@ export default function ChatConversationPage() {
               onClick={() => {
                 setReplyTo(selectedMessage);
                 setShowMessageOptions(false);
+                setSelectedMessage(null);
                 inputRef.current?.focus();
               }}
               className="w-full flex items-center gap-3 p-3 rounded-[6px] hover:bg-neutral-100 dark:hover:bg-neutral-700 discuss:hover:bg-[#333333] text-neutral-900 dark:text-neutral-50 discuss:text-[#F5F5F5] transition-colors"
@@ -785,13 +857,15 @@ export default function ChatConversationPage() {
               <Reply className="w-5 h-5 text-[#2563EB] discuss:text-[#EF4444]" />
               <span>Reply</span>
             </button>
-            <button
-              onClick={handleCopyMessage}
-              className="w-full flex items-center gap-3 p-3 rounded-[6px] hover:bg-neutral-100 dark:hover:bg-neutral-700 discuss:hover:bg-[#333333] text-neutral-900 dark:text-neutral-50 discuss:text-[#F5F5F5] transition-colors"
-            >
-              <Copy className="w-5 h-5 text-[#10B981]" />
-              <span>Copy</span>
-            </button>
+            {!selectedMessage?.deleted && (
+              <button
+                onClick={handleCopyMessage}
+                className="w-full flex items-center gap-3 p-3 rounded-[6px] hover:bg-neutral-100 dark:hover:bg-neutral-700 discuss:hover:bg-[#333333] text-neutral-900 dark:text-neutral-50 discuss:text-[#F5F5F5] transition-colors"
+              >
+                <Copy className="w-5 h-5 text-[#10B981]" />
+                <span>Copy</span>
+              </button>
+            )}
             <button
               onClick={() => {
                 setDeleteMode('me');

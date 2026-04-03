@@ -59,9 +59,15 @@ export default function ChatPage() {
         const chatsWithDetails = await Promise.all(
           rawChats.map(async (chat) => {
             try {
-              if (!chat.otherUser) return { ...chat, otherUserDetails: null };
+              if (!chat.otherUser) return null; // Skip chats without otherUser
               
               const userData = await getUser(chat.otherUser);
+              
+              // Skip if user doesn't exist or is invalid
+              if (!userData || !userData.username) {
+                console.warn('Skipping chat with invalid user:', chat.otherUser);
+                return null;
+              }
               
               // Get chat settings for auto-delete indicator
               const settings = await getChatSettings(chat.chatId);
@@ -71,22 +77,25 @@ export default function ChatPage() {
               
               return {
                 ...chat,
-                otherUserDetails: userData ? {
+                otherUserDetails: {
                   id: chat.otherUser,
-                  username: userData.username || 'Unknown',
+                  username: userData.username,
                   email: userData.email || '',
                   photo_url: userData.photo_url || '',
                   verified: userData.verified || false
-                } : null
+                }
               };
             } catch (err) {
               console.error('Error fetching user:', err);
-              return { ...chat, otherUserDetails: null };
+              return null; // Skip chats with errors
             }
           })
         );
         
-        setChats(chatsWithDetails);
+        // Filter out null values (invalid chats)
+        const validChats = chatsWithDetails.filter(chat => chat !== null && chat.otherUserDetails !== null);
+        
+        setChats(validChats);
         // Cache the chats data
         await cacheChats(user.id, chatsWithDetails);
         
@@ -110,25 +119,34 @@ export default function ChatPage() {
       const chatsWithDetails = await Promise.all(
         updatedChats.map(async (chat) => {
           try {
-            if (!chat.otherUser) return { ...chat, otherUserDetails: null };
+            if (!chat.otherUser) return null;
             
             const userData = await getUser(chat.otherUser);
+            
+            // Skip if user doesn't exist or is invalid
+            if (!userData || !userData.username) {
+              return null;
+            }
+            
             return {
               ...chat,
-              otherUserDetails: userData ? {
+              otherUserDetails: {
                 id: chat.otherUser,
-                username: userData.username || 'Unknown',
+                username: userData.username,
                 email: userData.email || '',
                 photo_url: userData.photo_url || '',
                 verified: userData.verified || false
-              } : null
+              }
             };
           } catch {
-            return { ...chat, otherUserDetails: null };
+            return null;
           }
         })
       );
-      setChats(chatsWithDetails);
+      
+      // Filter out null values
+      const validChats = chatsWithDetails.filter(chat => chat !== null && chat.otherUserDetails !== null);
+      setChats(validChats);
     });
 
     return () => unsubscribe();
@@ -191,8 +209,14 @@ export default function ChatPage() {
   };
 
   const renderChatItem = (chat) => {
-    const otherUser = chat.otherUserDetails || {};
-    const initials = (otherUser.username || 'U').slice(0, 2).toUpperCase();
+    const otherUser = chat.otherUserDetails;
+    
+    // Skip rendering if no valid user details
+    if (!otherUser || !otherUser.username) {
+      return null;
+    }
+    
+    const initials = otherUser.username.slice(0, 2).toUpperCase();
     const isBlocked = chat.status === 'blocked';
     const hasAutoDelete = chatSettings[chat.chatId]?.autoDelete;
     const hasUnread = chat.unreadCount > 0 && !isBlocked;
@@ -233,7 +257,7 @@ export default function ChatPage() {
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1 min-w-0">
               <span className={`font-semibold text-sm truncate ${hasUnread ? 'text-neutral-900 dark:text-white discuss:text-white' : 'text-neutral-900 dark:text-neutral-50 discuss:text-[#F5F5F5]'}`}>
-                @{otherUser.username || 'Unknown'}
+                @{otherUser.username}
               </span>
               {otherUser.verified && <VerifiedBadge size="sm" />}
               {hasAutoDelete && (
@@ -430,8 +454,8 @@ export default function ChatPage() {
         ) : (
           <div className="space-y-2 scrollbar-hide" style={{ maxHeight: 'calc(100vh - 280px)', overflowY: 'auto' }}>
             {activeTab === 'chats'
-              ? displayData.map(renderChatItem)
-              : displayData.map(renderFriendItem)
+              ? displayData.map(renderChatItem).filter(Boolean)
+              : displayData.map(renderFriendItem).filter(Boolean)
             }
           </div>
         )}
