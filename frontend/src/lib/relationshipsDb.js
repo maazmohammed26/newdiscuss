@@ -16,6 +16,7 @@ import {
   orderByChild,
   equalTo
 } from './firebaseSecondary';
+import { notifyFriendRequest, notifyFriendAccepted } from './pushNotificationService';
 
 // Relationship statuses
 export const RELATIONSHIP_STATUS = {
@@ -81,7 +82,7 @@ export const searchUsers = async (searchQuery, currentUserId) => {
  * @param {string} fromUserId - Sender's user ID
  * @param {string} toUserId - Recipient's user ID
  */
-export const sendFriendRequest = async (fromUserId, toUserId) => {
+export const sendFriendRequest = async (fromUserId, toUserId, fromUsername = null) => {
   try {
     const timestamp = new Date().toISOString();
     
@@ -99,6 +100,13 @@ export const sendFriendRequest = async (fromUserId, toUserId) => {
       createdAt: timestamp
     });
     
+    // Send push notification to recipient
+    try {
+      await notifyFriendRequest(toUserId, fromUserId, fromUsername);
+    } catch (notifError) {
+      console.log('Friend request notification skipped:', notifError);
+    }
+    
     return { success: true };
   } catch (error) {
     console.error('Error sending friend request:', error);
@@ -111,7 +119,7 @@ export const sendFriendRequest = async (fromUserId, toUserId) => {
  * @param {string} currentUserId - Current user's ID (acceptor)
  * @param {string} fromUserId - Sender's user ID
  */
-export const acceptFriendRequest = async (currentUserId, fromUserId) => {
+export const acceptFriendRequest = async (currentUserId, fromUserId, currentUsername = null) => {
   try {
     const timestamp = new Date().toISOString();
     
@@ -137,6 +145,13 @@ export const acceptFriendRequest = async (currentUserId, fromUserId) => {
       since: timestamp,
       chatEnabled: true
     });
+    
+    // Send push notification to the original sender
+    try {
+      await notifyFriendAccepted(fromUserId, currentUserId, currentUsername);
+    } catch (notifError) {
+      console.log('Friend accepted notification skipped:', notifError);
+    }
     
     return { success: true };
   } catch (error) {

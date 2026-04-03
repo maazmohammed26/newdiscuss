@@ -47,9 +47,10 @@ import {
 import { 
   FileText, LogOut, Loader2, ChevronDown, ChevronUp, 
   Calendar, Filter, ShieldCheck, User, Pencil, Trash2, Plus, Link2, X, Check, ExternalLink,
-  Info, Mail, Image as ImageIcon, Users, UserPlus, Search, Clock, MessageCircle, Share2
+  Info, Mail, Image as ImageIcon, Users, UserPlus, Search, Clock, MessageCircle, Share2, Bell
 } from 'lucide-react';
 import { toast } from 'sonner';
+import NotificationToggle from '@/components/NotificationToggle';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
@@ -767,6 +768,15 @@ export default function ProfilePage() {
               <span className="text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] text-sm font-medium">Theme</span>
             </div>
             <ThemeSelector />
+          </div>
+
+          {/* Notification Settings */}
+          <div className="mt-6 pt-5 border-t border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">
+            <div className="flex items-center gap-2 mb-3">
+              <Bell className="w-4 h-4 text-[#2563EB] discuss:text-[#EF4444]" />
+              <span className="text-[#0F172A] dark:text-[#F1F5F9] discuss:text-[#F5F5F5] text-sm font-medium">Notifications</span>
+            </div>
+            <NotificationToggle />
           </div>
 
           <Button data-testid="profile-logout-btn" onClick={handleLogout} disabled={loggingOut}

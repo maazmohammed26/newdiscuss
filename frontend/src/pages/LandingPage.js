@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
 import LoadingScreen from '@/components/LoadingScreen';
 import PWAInstallBanner from '@/components/PWAInstallBanner';
+import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import AdminMessageBanner from '@/components/AdminMessageBanner';
 import DiscussLogo from '@/components/DiscussLogo';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -79,6 +80,7 @@ export default function LandingPage() {
       <Header />
       <AdminMessageBanner />
       <PWAInstallBanner />
+      <PWAInstallPrompt />
 
       {/* Hero */}
       <section className="pt-16 pb-20 px-4 md:px-8">

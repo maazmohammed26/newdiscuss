@@ -22,5 +22,7 @@
   "background_color": "#F8FAFC",
   "orientation": "portrait-primary",
   "scope": "/",
-  "categories": ["social", "productivity"]
+  "categories": ["social", "productivity"],
+  "gcm_sender_id": "1039827441866",
+  "permissions": ["notifications", "push"]
 }
