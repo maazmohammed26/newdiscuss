@@ -192,12 +192,14 @@ export default function ChatConversationPage() {
     return () => unsubscribe();
   }, [chatId, user?.id]);
 
-  // Scroll to bottom when new messages arrive
+  // Initial scroll to bottom when chat loads
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (!loading && messagesEndRef.current) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+      }, 100);
     }
-  }, [messages]);
+  }, [loading]);
 
   // Handle relationship status change
   const handleStatusChange = useCallback((newStatus) => {
