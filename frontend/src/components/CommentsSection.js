@@ -46,17 +46,21 @@ function timeAgo(iso) {
 }
 
 // Reply Component
-function CommentReply({ reply, currentUser, postId, commentId, onDelete }) {
+function CommentReply({ reply, currentUser, postId, commentId, postAuthorId, onDelete }) {
   const isCurrentUser = reply.author_id === currentUser?.id;
+  const isPostAuthor = reply.author_id === postAuthorId;
   
   return (
-    <div className="ml-6 mt-2 pl-3 border-l-2 border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]">
+    <div className={`ml-6 mt-2 pl-3 border-l-2 ${isPostAuthor ? 'border-[#BC4800] discuss:border-[#EF4444] bg-[#BC4800]/5 dark:bg-[#BC4800]/10 discuss:bg-[#EF4444]/5' : 'border-[#E2E8F0] dark:border-[#334155] discuss:border-[#333333]'} rounded-r-md pr-2 py-1`}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-semibold text-[#1D7AFF] discuss:text-[#60A5FA] text-[12px]">
             {reply.author_username}
           </span>
           {reply.author_verified && <VerifiedBadge size="xs" />}
+          {isPostAuthor && (
+            <span className="bg-[#BC4800]/15 discuss:bg-[#EF4444]/15 text-[#BC4800] discuss:text-[#EF4444] text-[9px] font-bold uppercase px-1 py-0.5 rounded">Author</span>
+          )}
           <span className="text-[#6275AF] dark:text-[#94A3B8] text-[10px]">{timeAgo(reply.timestamp)}</span>
         </div>
         {isCurrentUser && (
@@ -66,7 +70,9 @@ function CommentReply({ reply, currentUser, postId, commentId, onDelete }) {
         )}
       </div>
       <div className="text-[#0F172A] dark:text-[#E2E8F0] discuss:text-[#E5E7EB] text-[12px] mt-0.5">
-        <LinkifiedText text={reply.text} className="whitespace-pre-wrap" />
+        <ExpandableText text={reply.text} maxLines={4}>
+          <LinkifiedText text={reply.text} className="whitespace-pre-wrap" />
+        </ExpandableText>
       </div>
     </div>
   );
@@ -245,6 +251,7 @@ function CommentItem({ comment, postAuthorId, currentUser, postId, onDelete, onU
                 currentUser={currentUser} 
                 postId={postId}
                 commentId={comment.id}
+                postAuthorId={postAuthorId}
                 onDelete={handleDeleteReply}
               />
             ))
