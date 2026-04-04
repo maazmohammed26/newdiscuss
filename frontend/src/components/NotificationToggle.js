@@ -11,12 +11,14 @@ import {
   getPermissionStatus,
   registerPushSubscription,
   unsubscribePush,
-  isNotificationsEnabled,
-  showNotification
+  isNotificationsEnabled
 } from '@/lib/pushNotificationService';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Bell, BellOff, Loader2, AlertCircle, Smartphone, CheckCircle } from 'lucide-react';
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from '@/components/ui/popover';
+import { Bell, BellOff, Loader2, AlertCircle, Smartphone, Info } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function NotificationToggle({ compact = false }) {
@@ -25,7 +27,6 @@ export default function NotificationToggle({ compact = false }) {
   const [toggling, setToggling] = useState(false);
   const [showIOSHelp, setShowIOSHelp] = useState(false);
   
-  // Check current notification status
   useEffect(() => {
     const checkStatus = async () => {
       try {
@@ -35,15 +36,12 @@ export default function NotificationToggle({ compact = false }) {
       }
       setLoading(false);
     };
-    
     checkStatus();
   }, []);
   
-  // Handle toggle
   const handleToggle = async () => {
     if (toggling) return;
     
-    // Check iOS requirements
     if (isIOS() && !isPWAInstalled()) {
       setShowIOSHelp(true);
       toast.error('Install the app first', {
@@ -70,19 +68,10 @@ export default function NotificationToggle({ compact = false }) {
     
     try {
       if (!enabled) {
-        // Enable notifications
         const subscription = await registerPushSubscription();
         if (subscription) {
           setEnabled(true);
           toast.success('Notifications enabled! 🔔');
-          
-          // Send test notification
-          setTimeout(async () => {
-            await showNotification('Welcome to Discuss! 🎉', {
-              body: 'You will now receive notifications for messages and updates.',
-              tag: 'welcome'
-            });
-          }, 1000);
         } else {
           const permission = getPermissionStatus();
           if (permission === 'denied') {
@@ -94,7 +83,6 @@ export default function NotificationToggle({ compact = false }) {
           }
         }
       } else {
-        // Disable notifications
         await unsubscribePush();
         setEnabled(false);
         toast.success('Notifications disabled');
@@ -107,20 +95,6 @@ export default function NotificationToggle({ compact = false }) {
     setToggling(false);
   };
   
-  // Test notification button
-  const handleTestNotification = async () => {
-    if (!enabled) {
-      toast.error('Enable notifications first');
-      return;
-    }
-    
-    await showNotification('Test Notification 🧪', {
-      body: 'Push notifications are working correctly!',
-      tag: 'test-' + Date.now()
-    });
-    toast.success('Test notification sent!');
-  };
-  
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-muted-foreground">
@@ -130,7 +104,6 @@ export default function NotificationToggle({ compact = false }) {
     );
   }
   
-  // Compact mode - just icon button
   if (compact) {
     return (
       <Button
@@ -152,7 +125,6 @@ export default function NotificationToggle({ compact = false }) {
     );
   }
   
-  // Full mode with label and switch
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-muted/50">
@@ -163,7 +135,27 @@ export default function NotificationToggle({ compact = false }) {
             <BellOff className="h-5 w-5 text-muted-foreground" />
           )}
           <div>
-            <p className="font-medium text-sm">Push Notifications</p>
+            <div className="flex items-center gap-2">
+              <p className="font-medium text-sm">Push Notifications</p>
+              {/* Info Icon */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="text-muted-foreground hover:text-primary transition-colors">
+                    <Info className="h-4 w-4" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 text-sm" align="start">
+                  <div className="space-y-2">
+                    <p className="font-medium">About Notifications</p>
+                    <ul className="text-muted-foreground text-xs space-y-1">
+                      <li>• There may be slight delays in some notifications</li>
+                      <li>• Some notifications may not work perfectly yet</li>
+                      <li>• We are actively improving and optimizing the system</li>
+                    </ul>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
             <p className="text-xs text-muted-foreground">
               {enabled ? 'You\'ll receive alerts for messages & updates' : 'Enable to get notified'}
             </p>
@@ -179,19 +171,6 @@ export default function NotificationToggle({ compact = false }) {
           />
         </div>
       </div>
-      
-      {/* Test Notification Button */}
-      {enabled && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleTestNotification}
-          className="w-full"
-        >
-          <CheckCircle className="h-4 w-4 mr-2" />
-          Send Test Notification
-        </Button>
-      )}
       
       {/* iOS Help */}
       {showIOSHelp && isIOS() && !isPWAInstalled() && (

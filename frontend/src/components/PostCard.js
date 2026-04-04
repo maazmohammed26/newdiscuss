@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toggleVote, deletePost } from '@/lib/db';
+import { hasNewComments } from '@/lib/commentsDb';
 import CommentsSection from '@/components/CommentsSection';
 import ShareModal from '@/components/ShareModal';
 import EditPostModal from '@/components/EditPostModal';
@@ -42,6 +43,7 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
   const [deleting, setDeleting] = useState(false);
   const [externalLink, setExternalLink] = useState(null);
   const [previewUser, setPreviewUser] = useState(null);
+  const [hasNewCommentBadge, setHasNewCommentBadge] = useState(false);
 
   const isAuthor = currentUser?.id === post.author_id;
   const isProject = post.type === 'project';
@@ -49,6 +51,18 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
   const userVote = (post.votes || {})[currentUser?.id] || null;
   const upvoteCount = post.upvote_count || 0;
   const downvoteCount = post.downvote_count || 0;
+
+  // Check for new comment badge (only for post author)
+  useEffect(() => {
+    if (isAuthor && currentUser?.id) {
+      hasNewComments(post.id, currentUser.id).then(setHasNewCommentBadge);
+    }
+  }, [post.id, currentUser?.id, isAuthor]);
+
+  // Clear badge when comments are viewed
+  const handleBadgeClear = useCallback(() => {
+    setHasNewCommentBadge(false);
+  }, []);
 
   const handlePostClick = () => {
     navigate(`/post/${post.id}`);
@@ -213,9 +227,12 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
         <div className="w-px h-4 bg-neutral-200 dark:bg-neutral-700 discuss:bg-[#333333] mx-1" />
 
         <button data-testid={`post-comments-btn-${post.id}`} onClick={() => setShowComments(!showComments)}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[6px] text-[13px] font-medium text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF] hover:bg-neutral-100 dark:hover:bg-neutral-700 discuss:hover:bg-[#262626] hover:text-neutral-900 dark:hover:text-white discuss:hover:text-[#F5F5F5] transition-colors">
+          className="relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-[6px] text-[13px] font-medium text-neutral-500 dark:text-neutral-400 discuss:text-[#9CA3AF] hover:bg-neutral-100 dark:hover:bg-neutral-700 discuss:hover:bg-[#262626] hover:text-neutral-900 dark:hover:text-white discuss:hover:text-[#F5F5F5] transition-colors">
           <MessageSquare className="w-4 h-4" />
           <span data-testid={`post-comment-count-${post.id}`}>{post.comment_count || 0}</span>
+          {hasNewCommentBadge && !showComments && (
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#EF4444] rounded-full animate-pulse" />
+          )}
         </button>
 
         <button data-testid={`post-share-btn-${post.id}`} onClick={() => setShowShare(true)}
@@ -225,7 +242,7 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
         </button>
       </div>
 
-      {showComments && <CommentsSection postId={post.id} postAuthorId={post.author_id} currentUser={currentUser} />}
+      {showComments && <CommentsSection postId={post.id} postAuthorId={post.author_id} currentUser={currentUser} onBadgeClear={handleBadgeClear} />}
       <ShareModal open={showShare} onClose={() => setShowShare(false)} post={post} />
       <EditPostModal open={showEditModal} onClose={() => setShowEditModal(false)} post={post} currentUser={currentUser} onUpdated={onUpdated} />
 
