@@ -3,9 +3,14 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { subscribeToUnreadCount } from '@/lib/chatsDb';
 import { subscribeToReceivedRequests } from '@/lib/relationshipsDb';
+import { subscribeToAdminMessage, markAdminMessageSeen } from '@/lib/adminMessageDb';
+import { subscribeToCommentBadges } from '@/lib/commentsDb';
 import DiscussLogo from '@/components/DiscussLogo';
 import { Button } from '@/components/ui/button';
-import { User, MessageCircle, Bell } from 'lucide-react';
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from '@/components/ui/popover';
+import { User, MessageCircle, Bell, Megaphone } from 'lucide-react';
 
 export default function Header() {
   const { user } = useAuth();
@@ -13,6 +18,10 @@ export default function Header() {
   const isLanding = location.pathname === '/';
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [pendingRequests, setPendingRequests] = useState(0);
+  const [adminMessage, setAdminMessage] = useState(null);
+  const [hasUnseenAdmin, setHasUnseenAdmin] = useState(false);
+  const [showAdminPopover, setShowAdminPopover] = useState(false);
+  const [commentBadgeCount, setCommentBadgeCount] = useState(0);
 
   // Subscribe to unread message count
   useEffect(() => {
@@ -25,14 +34,43 @@ export default function Header() {
     const unsubscribeRequests = subscribeToReceivedRequests(user.id, (requests) => {
       setPendingRequests(requests.length);
     });
+    
+    // Subscribe to comment badges (for post owners)
+    const unsubscribeCommentBadges = subscribeToCommentBadges(user.id, (badges) => {
+      // Count total posts with new comments
+      const count = Object.keys(badges || {}).length;
+      setCommentBadgeCount(count);
+    });
 
     return () => {
       unsubscribeMessages();
       unsubscribeRequests();
+      unsubscribeCommentBadges();
     };
   }, [user?.id]);
 
-  const totalNotifications = unreadMessages + pendingRequests;
+  // Subscribe to admin message
+  useEffect(() => {
+    if (!user?.id) return;
+    
+    const unsubscribe = subscribeToAdminMessage((msg, isNew) => {
+      setAdminMessage(msg);
+      setHasUnseenAdmin(isNew);
+    });
+    
+    return () => unsubscribe();
+  }, [user?.id]);
+
+  // Handle admin message popover open
+  const handleAdminPopoverOpen = (open) => {
+    setShowAdminPopover(open);
+    if (open && hasUnseenAdmin) {
+      markAdminMessageSeen();
+      setHasUnseenAdmin(false);
+    }
+  };
+
+  const totalNotifications = unreadMessages + pendingRequests + commentBadgeCount;
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-neutral-900/95 discuss:bg-[#121212]/95 backdrop-blur-sm border-b border-neutral-200 dark:border-neutral-800 discuss:border-[#333333]">
@@ -53,6 +91,38 @@ export default function Header() {
                   Feed
                 </Button>
               </Link>
+              
+              {/* Admin Message Icon - Only show if active */}
+              {adminMessage && (
+                <Popover open={showAdminPopover} onOpenChange={handleAdminPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      className="relative w-9 h-9 p-0 rounded-[6px] bg-neutral-100 dark:bg-neutral-800 discuss:bg-[#1a1a1a] hover:bg-neutral-200 dark:hover:bg-neutral-700 discuss:hover:bg-[#262626] border border-neutral-200 dark:border-neutral-700 discuss:border-[#333333]"
+                    >
+                      <Megaphone className="w-4 h-4 text-neutral-600 dark:text-neutral-400 discuss:text-[#9CA3AF]" />
+                      {hasUnseenAdmin && (
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-[#EF4444] rounded-full animate-pulse" />
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 p-3" align="end">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-[#2563EB] discuss:text-[#EF4444]">
+                        <Megaphone className="w-4 h-4" />
+                        Admin Message
+                      </div>
+                      <p className="text-sm text-neutral-700 dark:text-neutral-300">
+                        {adminMessage.message}
+                      </p>
+                      <p className="text-[10px] text-neutral-500">
+                        {adminMessage.createdAt && new Date(adminMessage.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+              
               <Link to="/chat" className="relative">
                 <Button 
                   variant="ghost" 
@@ -79,9 +149,9 @@ export default function Header() {
                     <User className="w-4 h-4 text-neutral-600 dark:text-neutral-400 discuss:text-[#9CA3AF]" />
                   )}
                 </Button>
-                {pendingRequests > 0 && (
+                {(pendingRequests > 0 || commentBadgeCount > 0) && (
                   <span className="absolute -top-1 -right-1 bg-[#F59E0B] text-white text-[10px] font-bold min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1">
-                    {pendingRequests > 99 ? '99+' : pendingRequests}
+                    {(pendingRequests + commentBadgeCount) > 99 ? '99+' : pendingRequests + commentBadgeCount}
                   </span>
                 )}
               </Link>

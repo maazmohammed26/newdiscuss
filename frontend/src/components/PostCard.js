@@ -52,11 +52,23 @@ export default function PostCard({ post, currentUser, onDeleted, onUpdated, onVo
   const upvoteCount = post.upvote_count || 0;
   const downvoteCount = post.downvote_count || 0;
 
-  // Check for new comment badge (only for post author)
+  // Check for new comment badge (only for post author) - real-time
   useEffect(() => {
-    if (isAuthor && currentUser?.id) {
-      hasNewComments(post.id, currentUser.id).then(setHasNewCommentBadge);
+    if (!isAuthor || !currentUser?.id) {
+      setHasNewCommentBadge(false);
+      return;
     }
+    
+    // Import and subscribe to real-time updates
+    const { secondaryDatabase, ref, onValue, off } = require('@/lib/firebaseSecondary');
+    const badgeRef = ref(secondaryDatabase, `commentBadges/${currentUser.id}/${post.id}`);
+    
+    const handleBadge = (snapshot) => {
+      setHasNewCommentBadge(snapshot.exists() && Object.keys(snapshot.val() || {}).length > 0);
+    };
+    
+    onValue(badgeRef, handleBadge);
+    return () => off(badgeRef);
   }, [post.id, currentUser?.id, isAuthor]);
 
   // Clear badge when comments are viewed
